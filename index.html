@@ -1,72 +1,217 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sovereign.io - Territory Game</title>
+    <title>Sovereign.io - Territory Conquest Game</title>
     <style>
         body { 
             margin: 0; 
+            padding: 20px; 
             background: #1a1a1a; 
-            color: white;
+            color: white; 
             font-family: Arial, sans-serif;
-        }
-        #game {
             text-align: center;
-            padding: 50px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
         }
         canvas {
             border: 2px solid #3498db;
             background: #2c3e50;
+            margin: 20px 0;
         }
         .info {
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px auto;
-            max-width: 600px;
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2980b9;
         }
     </style>
 </head>
 <body>
-    <div id="game">
+    <div class="container">
         <h1>🏰 Sovereign.io</h1>
         <div class="info">
             <h3>Army-Based Territory Conquest</h3>
             <p>Use troops to claim land • Build economy • Research tech • 5-minute matches</p>
-            <p><strong>UNDER CONSTRUCTION - Help us build this!</strong></p>
+            <p><strong>Click on the map to claim territories with your army!</strong></p>
+        </div>
+        
+        <div class="player-controls">
+            <button onclick="trainArmy('infantry')">Train Infantry (50 gold)</button>
+            <button onclick="trainArmy('cavalry')">Train Cavalry (80 gold)</button>
+            <div id="resources">Gold: 1000 | Manpower: 500 | Territories: 0</div>
         </div>
         
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         
         <div class="info">
-            <h3>🚧 Want to Help?</h3>
-            <p>We need developers, artists, testers!</p>
-            <p><a href="https://github.com/r293239/Sovereign.io" style="color: #3498db;">Fork the repo on GitHub</a></p>
+            <h3>🚧 Under Construction - Want to Help?</h3>
+            <p>We need developers, artists, testers! Fork the repo on GitHub and start coding.</p>
+            <p><a href="https://github.com/r293239/Sovereign.io" style="color: #3498db;">GitHub Repository</a></p>
         </div>
     </div>
 
     <script>
-        // BASIC DEMO - so people can actually SEE something
+        // Game State
+        const gameState = {
+            players: [
+                { id: 'player1', color: '#3498db', gold: 1000, manpower: 500, territories: [] }
+            ],
+            armies: [],
+            territories: []
+        };
+
+        // Initialize territories
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const pixelSize = 4;
         
-        // Draw some placeholder territories
-        ctx.fillStyle = '#3498db';
-        for(let i = 0; i < 50; i++) {
-            const x = Math.random() * 700;
-            const y = 50 + Math.random() * 400;
-            ctx.fillRect(x, y, 4, 4);
+        for(let x = 0; x < 200; x++) {
+            for(let y = 0; y < 125; y++) {
+                gameState.territories.push({
+                    x, y,
+                    ownerId: null,
+                    armyGarrison: 0
+                });
+            }
         }
-        
-        // Draw "player" territories
-        ctx.fillStyle = '#2ecc71';
-        ctx.fillRect(100, 100, 100, 100);
-        ctx.fillStyle = '#e74c3c'; 
-        ctx.fillRect(500, 300, 80, 80);
-        
-        // Add some text
-        ctx.fillStyle = 'white';
-        ctx.font = '16px Arial';
-        ctx.fillText('Player Territories - Coming Soon!', 300, 30);
+
+        // Draw everything
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw territories
+            gameState.territories.forEach(territory => {
+                if (territory.ownerId) {
+                    const player = gameState.players.find(p => p.id === territory.ownerId);
+                    if (player) {
+                        ctx.fillStyle = player.color;
+                        ctx.fillRect(
+                            territory.x * pixelSize, 
+                            territory.y * pixelSize, 
+                            pixelSize, 
+                            pixelSize
+                        );
+                    }
+                }
+            });
+            
+            // Draw armies
+            gameState.armies.forEach(army => {
+                const player = gameState.players.find(p => p.id === army.playerId);
+                ctx.fillStyle = player.color;
+                ctx.beginPath();
+                ctx.arc(
+                    army.position.x * pixelSize,
+                    army.position.y * pixelSize,
+                    Math.max(3, army.size / 5),
+                    0,
+                    2 * Math.PI
+                );
+                ctx.fill();
+            });
+            
+            // Update UI
+            updateUI();
+        }
+
+        function updateUI() {
+            const player = gameState.players[0];
+            document.getElementById('resources').textContent = 
+                `Gold: ${player.gold} | Manpower: ${player.manpower} | Territories: ${player.territories.length}`;
+        }
+
+        // Click to claim territory
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((event.clientX - rect.left) / pixelSize);
+            const y = Math.floor((event.clientY - rect.top) / pixelSize);
+            
+            // Create army and send to location
+            if (gameState.players[0].manpower >= 10) {
+                gameState.armies.push({
+                    id: Date.now().toString(),
+                    playerId: 'player1',
+                    size: 10,
+                    position: { x: 10, y: 10 }, // Start position
+                    destination: { x, y },
+                    type: 'infantry'
+                });
+                gameState.players[0].manpower -= 10;
+                render();
+            }
+        });
+
+        // Army movement
+        function updateGame() {
+            gameState.armies.forEach(army => {
+                if (army.destination) {
+                    const dx = army.destination.x - army.position.x;
+                    const dy = army.destination.y - army.position.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 0.5) {
+                        // Claim territory
+                        const territory = gameState.territories.find(t => 
+                            t.x === Math.floor(army.position.x) && 
+                            t.y === Math.floor(army.position.y)
+                        );
+                        if (territory && !territory.ownerId) {
+                            territory.ownerId = army.playerId;
+                            gameState.players[0].territories.push(territory);
+                            gameState.players[0].gold += 10; // Income from territory
+                        }
+                        army.destination = null;
+                    } else {
+                        army.position.x += (dx / distance) * 0.2;
+                        army.position.y += (dy / distance) * 0.2;
+                    }
+                }
+            });
+            render();
+        }
+
+        function trainArmy(type) {
+            const player = gameState.players[0];
+            const cost = type === 'infantry' ? 50 : 80;
+            
+            if (player.gold >= cost && player.manpower >= 20) {
+                player.gold -= cost;
+                player.manpower -= 20;
+                
+                gameState.armies.push({
+                    id: Date.now().toString(),
+                    playerId: 'player1',
+                    size: 20,
+                    position: { x: 10, y: 10 },
+                    destination: null,
+                    type: type
+                });
+                render();
+            }
+        }
+
+        // Start game loop
+        setInterval(updateGame, 50);
+        render(); // Initial render
     </script>
 </body>
 </html>
