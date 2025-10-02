@@ -1,8 +1,9 @@
 {
   "name": "sovereign-io",
   "version": "0.1.0",
-  "description": "Fast-paced territory conquest game with economy, army, and research mechanics",
+  "description": "Fast-paced territory conquest game with army-based expansion and economy",
   "private": true,
+  "type": "module",
   "workspaces": [
     "client",
     "server",
@@ -16,9 +17,10 @@
     "install:all": "npm install --workspaces"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "typescript": "^5.3.0"
   },
-  "keywords": ["game", "strategy", "multiplayer", "io-game"],
-  "author": "Reuben",
+  "keywords": ["game", "strategy", "multiplayer", "io-game", "territory"],
+  "author": "YourName",
   "license": "MIT"
 }
