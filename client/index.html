@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sovereign.io - Territory Conquest Game</title>
+    <style>
+        body { margin: 0; padding: 0; background: #1a1a1a; color: white; font-family: Arial, sans-serif; }
+        #gameContainer { position: relative; width: 100vw; height: 100vh; }
+        #gameCanvas { display: block; background: #2c3e50; }
+        #uiPanel { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="uiPanel">
+            <h3>Sovereign.io</h3>
+            <div id="resources">
+                <div>Gold: <span id="gold">1000</span></div>
+                <div>Manpower: <span id="manpower">500</span></div>
+                <div>Materials: <span id="materials">300</span></div>
+                <div>Energy: <span id="energy">200</span></div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
