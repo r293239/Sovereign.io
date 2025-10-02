@@ -1,26 +1,10 @@
 {
-  "name": "sovereign-io",
-  "version": "0.1.0",
-  "description": "Fast-paced territory conquest game with army-based expansion and economy",
-  "private": true,
-  "type": "module",
-  "workspaces": [
-    "client",
-    "server",
-    "shared"
-  ],
   "scripts": {
+    "build": "npm run build --workspace=client",
+    "build:client": "cd client && npm run build",
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
-    "client:dev": "npm run dev --workspace=client",
+    "client:dev": "npm run dev --workspace=client", 
     "server:dev": "npm run dev --workspace=server",
-    "build": "npm run build --workspaces",
     "install:all": "npm install --workspaces"
-  },
-  "devDependencies": {
-    "concurrently": "^8.2.0",
-    "typescript": "^5.3.0"
-  },
-  "keywords": ["game", "strategy", "multiplayer", "io-game", "territory"],
-  "author": "YourName",
-  "license": "MIT"
+  }
 }
