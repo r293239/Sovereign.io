@@ -4,7 +4,7 @@ First off, thank you for considering contributing to Sovereign.io! It's people l
 
 ## 🎯 Quick Start for New Contributors
 
-**New to open source?** Check out our issues labeled [`good first issue`](https://github.com/r293239/sovereign-io/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) - these are perfect for getting started!
+**New to open source?** Check out our issues - these are perfect for getting started!
 
 ### Your First Contribution
 1. **Find an issue** labeled `good first issue` or `help wanted`
