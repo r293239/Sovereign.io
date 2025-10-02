@@ -1,17 +1,14 @@
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  server: {
-    port: 3000,
-    proxy: {
-      '/socket.io': {
-        target: 'http://localhost:3001',
-        ws: true
-      }
-    }
+{
+  "name": "sovereign-io-client",
+  "version": "0.1.0", 
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  build: {
-    target: 'es2020',
-    outDir: 'dist'
+  "dependencies": {},
+  "devDependencies": {
+    "vite": "^4.4.0"
   }
-});
+}
