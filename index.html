@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sovereign.io - Territory Game</title>
+    <style>
+        body { 
+            margin: 0; 
+            background: #1a1a1a; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #game {
+            text-align: center;
+            padding: 50px;
+        }
+        canvas {
+            border: 2px solid #3498db;
+            background: #2c3e50;
+        }
+        .info {
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <h1>🏰 Sovereign.io</h1>
+        <div class="info">
+            <h3>Army-Based Territory Conquest</h3>
+            <p>Use troops to claim land • Build economy • Research tech • 5-minute matches</p>
+            <p><strong>UNDER CONSTRUCTION - Help us build this!</strong></p>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div class="info">
+            <h3>🚧 Want to Help?</h3>
+            <p>We need developers, artists, testers!</p>
+            <p><a href="https://github.com/r293239/Sovereign.io" style="color: #3498db;">Fork the repo on GitHub</a></p>
+        </div>
+    </div>
+
+    <script>
+        // BASIC DEMO - so people can actually SEE something
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Draw some placeholder territories
+        ctx.fillStyle = '#3498db';
+        for(let i = 0; i < 50; i++) {
+            const x = Math.random() * 700;
+            const y = 50 + Math.random() * 400;
+            ctx.fillRect(x, y, 4, 4);
+        }
+        
+        // Draw "player" territories
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(100, 100, 100, 100);
+        ctx.fillStyle = '#e74c3c'; 
+        ctx.fillRect(500, 300, 80, 80);
+        
+        // Add some text
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Arial';
+        ctx.fillText('Player Territories - Coming Soon!', 300, 30);
+    </script>
+</body>
+</html>
