@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sovereign.io</title>
+    <title>Sovereign.io - Territory Conquest Game</title>
     <style>
-        body { margin: 0; background: #1a1a1a; }
-        #gameCanvas { display: block; }
+        body { margin: 0; background: #1a1a1a; color: white; }
+        canvas { display: block; background: #2c3e50; }
+        #info { position: absolute; top: 10px; left: 10px; }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <script type="module" src="./src/main.js"></script>
+    <div id="info">
+        <h2>Sovereign.io</h2>
+        <p>Army-based territory conquest - Coming Soon!</p>
+    </div>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>
