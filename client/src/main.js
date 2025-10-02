@@ -1,25 +1,14 @@
-import { GameRenderer } from './game/GameRenderer.js';
-
 const canvas = document.getElementById('gameCanvas');
-const renderer = new GameRenderer(canvas);
+const ctx = canvas.getContext('2d');
 
-// Test data
-const testTerritories = [];
-for (let x = 0; x < 50; x++) {
-  for (let y = 0; y < 50; y++) {
-    testTerritories.push({
-      id: `${x}-${y}`,
-      x, y,
-      ownerId: Math.random() > 0.9 ? 'player1' : null
-    });
-  }
+// Draw something to prove it's working
+ctx.fillStyle = '#3498db';
+ctx.font = '24px Arial';
+ctx.fillText('Sovereign.io - Game Loading...', 50, 50);
+
+ctx.fillStyle = '#2ecc71';
+for (let i = 0; i < 20; i++) {
+    ctx.fillRect(Math.random() * 700, 100 + Math.random() * 400, 4, 4);
 }
 
-function gameLoop() {
-  renderer.render([], testTerritories);
-  requestAnimationFrame(gameLoop);
-}
-
-// Start
-gameLoop();
-console.log('Sovereign.io client running!');
+console.log('Sovereign.io client loaded!');
