@@ -16,7 +16,7 @@ A fast-paced, open-source territory conquest game combining strategic depth with
 
 ## 🚀 Getting Started
 ```bash
-git clone https://github.com/your-username/sovereign-io
+git clone https://github.com/r293239/sovereign-io
 cd sovereign-io
 npm install
 npm run dev
