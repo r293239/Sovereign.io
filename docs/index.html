@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sovereign.io - Territory Game</title>
+    <style>
+        body { margin: 0; padding: 20px; background: #1a1a1a; color: white; font-family: Arial; }
+        .container { max-width: 800px; margin: 0 auto; text-align: center; }
+        canvas { border: 2px solid #3498db; background: #2c3e50; margin: 20px 0; }
+        .info { background: #2d2d2d; padding: 15px; border-radius: 8px; margin: 10px 0; }
+        button { background: #3498db; color: white; border: none; padding: 10px; margin: 5px; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏰 Sovereign.io</h1>
+        <div class="info">
+            <h3>Click to Claim Territories!</h3>
+            <p>Click on the map to send armies. Claim land to generate resources.</p>
+            <div>💰 Gold: <span id="gold">100</span> | 👥 Manpower: <span id="manpower">50</span></div>
+        </div>
+        
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        
+        <div>
+            <button onclick="trainArmy()">Train Army (50 gold)</button>
+            <button onclick="addResource()">Add Test Resource</button>
+        </div>
+        
+        <div class="info">
+            <p><strong>Game Log:</strong></p>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simple game state
+        const state = {
+            gold: 100,
+            manpower: 50,
+            territories: [],
+            armies: []
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Draw initial grid
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw some "territories"
+            for (let i = 0; i < 20; i++) {
+                ctx.fillStyle = i < 5 ? '#2ecc71' : '#34495e';
+                ctx.fillRect(
+                    Math.random() * 550, 
+                    Math.random() * 350, 
+                    20, 20
+                );
+            }
+            
+            // Draw title
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText('Sovereign.io - Click to Claim!', 150, 30);
+        }
+
+        // Game functions
+        function trainArmy() {
+            if (state.gold >= 50) {
+                state.gold -= 50;
+                state.armies.push({ strength: 10 });
+                log('Trained new army!');
+                updateUI();
+            } else {
+                log('Not enough gold!');
+            }
+        }
+
+        function addResource() {
+            state.gold += 25;
+            log('Added test resources!');
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('gold').textContent = state.gold;
+            document.getElementById('manpower').textContent = state.manpower;
+        }
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = message + '<br>' + logDiv.innerHTML;
+        }
+
+        // Click to "claim" territory
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(x-10, y-10, 20, 20);
+            
+            state.gold += 10;
+            log('Claimed territory! +10 gold');
+            updateUI();
+        });
+
+        // Initialize
+        drawGrid();
+        log('Game ready! Click on the map to claim territories.');
+    </script>
+</body>
+</html>
