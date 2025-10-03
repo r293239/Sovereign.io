@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sovereign.io - Empire Builder</title>
+    <title>Sovereign.io - Realistic Conquest</title>
     <style>
         * {
             margin: 0;
@@ -60,6 +60,7 @@
             width: 100%;
             height: 100%;
             display: block;
+            cursor: crosshair;
         }
 
         .minimap {
@@ -164,12 +165,27 @@
             font-size: 12px;
             line-height: 1.4;
         }
+
+        .training-progress {
+            height: 4px;
+            background: #34495e;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .training-progress-bar {
+            height: 100%;
+            background: #3498db;
+            width: 0%;
+            transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🏰 Sovereign.io - Empire Builder</h1>
+            <h1>🏰 Sovereign.io - Realistic Conquest</h1>
             <div class="game-info">
                 <span>💰 <span id="gold">500</span></span>
                 <span>👥 <span id="manpower">200</span></span>
@@ -205,7 +221,12 @@
                 <div class="panel-section">
                     <h3>⚔️ Army Control</h3>
                     <div id="armyInfo" class="army-info">No army selected</div>
-                    <button onclick="trainArmy()" id="trainBtn">Train Army (50g)</button>
+                    <button onclick="trainArmy()" id="trainBtn">
+                        Train Army (50g) - <span id="trainTime">3s</span>
+                    </button>
+                    <div class="training-progress">
+                        <div id="trainingProgress" class="training-progress-bar"></div>
+                    </div>
                     <button onclick="upgradeArmy()" id="upgradeBtn">Upgrade Army (30g)</button>
                     <button onclick="mergeArmies()" id="mergeBtn">Merge Armies (20g)</button>
                 </div>
@@ -237,7 +258,9 @@
                 manpower: 200,
                 territories: new Set(),
                 armies: [],
-                buildings: []
+                buildings: [],
+                trainingQueue: [],
+                trainingProgress: 0
             },
             bots: [
                 { id: 'bot1', color: '#e74c3c', territories: new Set(), armies: [], buildings: [] },
@@ -248,7 +271,8 @@
             buildingMode: null,
             attackTarget: null,
             mapSize: { width: 800, height: 600 },
-            tileSize: 2
+            tileSize: 2,
+            lastTime: 0
         };
 
         // Building Types
@@ -289,21 +313,26 @@
         function initGame() {
             createMap();
             
-            // Give player starting territory
-            claimTerritoryArea(400, 300, 20, 'player');
+            // Give player starting territory (larger area)
+            claimTerritoryArea(400, 300, 25, 'player');
             
             // Give bots starting territories
-            claimTerritoryArea(100, 100, 15, 'bot1');
-            claimTerritoryArea(700, 500, 15, 'bot2');
+            claimTerritoryArea(100, 100, 20, 'bot1');
+            claimTerritoryArea(700, 500, 20, 'bot2');
             
             // Create starting armies
-            createArmy(400, 300, 'player', 20);
-            createArmy(100, 100, 'bot1', 15);
-            createArmy(700, 500, 'bot2', 15);
+            createArmy(400, 300, 'player', 30);
+            createArmy(100, 100, 'bot1', 25);
+            createArmy(700, 500, 'bot2', 25);
             
             render();
             updateUI();
-            addGameLog('Empire established! Build mines and factories to grow your economy.');
+            addGameLog('Empire established! Select armies and send them to conquer territory.');
+            addGameLog('PRO TIP: Armies conquer all land they pass through!');
+            
+            // Start game loop
+            gameState.lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
         }
 
         function createMap() {
@@ -321,36 +350,39 @@
             for (let x = centerX - radius; x <= centerX + radius; x += gameState.tileSize) {
                 for (let y = centerY - radius; y <= centerY + radius; y += gameState.tileSize) {
                     if (x >= 0 && x < gameState.mapSize.width && y >= 0 && y < gameState.mapSize.height) {
-                        claimTerritory(x, y, owner, 1);
+                        claimTerritory(x, y, owner, 2);
                     }
                 }
             }
         }
 
-        function claimTerritory(x, y, owner, radius = 1) {
+        function claimTerritory(x, y, owner, radius = 2) {
+            // Claim territory in a circle around the point (like openfront.io)
             for (let dx = -radius; dx <= radius; dx++) {
                 for (let dy = -radius; dy <= radius; dy++) {
-                    const newX = x + dx * gameState.tileSize;
-                    const newY = y + dy * gameState.tileSize;
-                    
-                    if (newX >= 0 && newX < gameState.mapSize.width && newY >= 0 && newY < gameState.mapSize.height) {
-                        const territory = gameState.map.find(t => t.x === newX && t.y === newY);
-                        if (territory && territory.owner !== owner) {
-                            // Remove from previous owner
-                            if (territory.owner === 'player') {
-                                gameState.player.territories.delete(`${newX}-${newY}`);
-                            } else if (territory.owner) {
-                                const prevBot = gameState.bots.find(b => b.id === territory.owner);
-                                if (prevBot) prevBot.territories.delete(`${newX}-${newY}`);
-                            }
-                            
-                            // Add to new owner
-                            territory.owner = owner;
-                            if (owner === 'player') {
-                                gameState.player.territories.add(`${newX}-${newY}`);
-                            } else {
-                                const bot = gameState.bots.find(b => b.id === owner);
-                                if (bot) bot.territories.add(`${newX}-${newY}`);
+                    if (dx * dx + dy * dy <= radius * radius) { // Circle check
+                        const newX = x + dx * gameState.tileSize;
+                        const newY = y + dy * gameState.tileSize;
+                        
+                        if (newX >= 0 && newX < gameState.mapSize.width && newY >= 0 && newY < gameState.mapSize.height) {
+                            const territory = gameState.map.find(t => t.x === newX && t.y === newY);
+                            if (territory && territory.owner !== owner) {
+                                // Remove from previous owner
+                                if (territory.owner === 'player') {
+                                    gameState.player.territories.delete(`${newX}-${newY}`);
+                                } else if (territory.owner) {
+                                    const prevBot = gameState.bots.find(b => b.id === territory.owner);
+                                    if (prevBot) prevBot.territories.delete(`${newX}-${newY}`);
+                                }
+                                
+                                // Add to new owner
+                                territory.owner = owner;
+                                if (owner === 'player') {
+                                    gameState.player.territories.add(`${newX}-${newY}`);
+                                } else {
+                                    const bot = gameState.bots.find(b => b.id === owner);
+                                    if (bot) bot.territories.add(`${newX}-${newY}`);
+                                }
                             }
                         }
                     }
@@ -358,14 +390,17 @@
             }
         }
 
-        function createArmy(x, y, owner, strength = 10) {
+        function createArmy(x, y, owner, strength = 15) {
             const ownerObj = owner === 'player' ? gameState.player : gameState.bots.find(b => b.id === owner);
             const army = {
                 x, y,
                 target: null,
                 strength: strength,
-                size: Math.max(8, strength / 2),
-                id: Math.random().toString(36).substr(2, 9)
+                size: Math.max(10, strength / 1.5), // Larger armies for better selection
+                id: Math.random().toString(36).substr(2, 9),
+                speed: 0.8, // Slower movement
+                lastX: x,
+                lastY: y
             };
             ownerObj.armies.push(army);
             return army;
@@ -430,7 +465,7 @@
                 });
             });
 
-            // Draw armies
+            // Draw armies with better selection visuals
             [gameState.player, ...gameState.bots].forEach(owner => {
                 owner.armies.forEach(army => {
                     // Draw army circle
@@ -439,19 +474,33 @@
                     ctx.arc(army.x, army.y, army.size, 0, Math.PI * 2);
                     ctx.fill();
                     
-                    // Draw selection ring if selected
+                    // Draw selection ring if selected (more visible)
                     if (gameState.selectedArmy === army) {
                         ctx.strokeStyle = '#00ff00';
-                        ctx.lineWidth = 3;
+                        ctx.lineWidth = 4;
                         ctx.beginPath();
-                        ctx.arc(army.x, army.y, army.size + 5, 0, Math.PI * 2);
+                        ctx.arc(army.x, army.y, army.size + 8, 0, Math.PI * 2);
                         ctx.stroke();
+                        
+                        // Draw movement line to target
+                        if (army.target) {
+                            ctx.strokeStyle = '#00ff00';
+                            ctx.lineWidth = 2;
+                            ctx.setLineDash([5, 5]);
+                            ctx.beginPath();
+                            ctx.moveTo(army.x, army.y);
+                            ctx.lineTo(army.target.x, army.target.y);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                        }
                     }
                     
                     // Army strength indicator
                     ctx.fillStyle = 'white';
-                    ctx.font = '12px Arial';
-                    ctx.fillText(army.strength, army.x-8, army.y+4);
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(army.strength, army.x, army.y + 4);
+                    ctx.textAlign = 'left';
                 });
             });
 
@@ -460,12 +509,22 @@
                 ctx.strokeStyle = '#ff0000';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(gameState.attackTarget.x, gameState.attackTarget.y, 15, 0, Math.PI * 2);
+                ctx.arc(gameState.attackTarget.x, gameState.attackTarget.y, 12, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw crosshair
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(gameState.attackTarget.x - 8, gameState.attackTarget.y);
+                ctx.lineTo(gameState.attackTarget.x + 8, gameState.attackTarget.y);
+                ctx.moveTo(gameState.attackTarget.x, gameState.attackTarget.y - 8);
+                ctx.lineTo(gameState.attackTarget.x, gameState.attackTarget.y + 8);
                 ctx.stroke();
             }
 
             // Draw building preview
-            if (gameState.buildingMode) {
+            if (gameState.buildingMode && gameState.buildingPreviewX) {
                 ctx.strokeStyle = '#00ff00';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([5, 5]);
@@ -502,7 +561,7 @@
             });
         }
 
-        // Click handlers
+        // Click handlers - IMPROVED ARMY SELECTION
         canvas.addEventListener('mousemove', (event) => {
             if (gameState.buildingMode) {
                 const rect = canvas.getBoundingClientRect();
@@ -510,6 +569,18 @@
                 gameState.buildingPreviewY = event.clientY - rect.top;
                 render();
             }
+            
+            // Update cursor style when hovering over army
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const hoveredArmy = gameState.player.armies.find(army => {
+                const distance = Math.sqrt((army.x - x) ** 2 + (army.y - y) ** 2);
+                return distance <= army.size + 5; // Larger hover area
+            });
+            
+            canvas.style.cursor = hoveredArmy ? 'pointer' : 'crosshair';
         });
 
         canvas.addEventListener('click', (event) => {
@@ -527,24 +598,28 @@
                 if (territory && territory.owner === 'player') {
                     createBuilding(x, y, gameState.buildingMode, 'player');
                     gameState.buildingMode = null;
+                    gameState.buildingPreviewX = null;
                 } else {
                     addGameLog('Can only build on your own territory!');
                 }
             } else {
-                // Army selection or attack order
+                // IMPROVED: Check for army selection with larger hit area
                 const clickedArmy = gameState.player.armies.find(army => {
                     const distance = Math.sqrt((army.x - x) ** 2 + (army.y - y) ** 2);
-                    return distance <= army.size;
+                    return distance <= army.size + 10; // Much larger selection area
                 });
                 
                 if (clickedArmy) {
                     gameState.selectedArmy = clickedArmy;
                     gameState.attackTarget = null;
-                    addGameLog(`Selected army (strength: ${clickedArmy.strength})`);
+                    addGameLog(`Selected army (${clickedArmy.strength} strength)`);
                 } else if (gameState.selectedArmy) {
+                    // Set attack target for selected army
                     gameState.attackTarget = { x, y };
                     gameState.selectedArmy.target = { x, y };
-                    addGameLog(`Attack order to (${x}, ${y})`);
+                    addGameLog(`Army moving to conquer territory at (${Math.floor(x/10)}, ${Math.floor(y/10)})`);
+                } else {
+                    addGameLog('Select an army first! Click on your blue circles.');
                 }
             }
             
@@ -552,8 +627,19 @@
             updateUI();
         });
 
-        // Game loop
-        function updateGame() {
+        // Game loop with delta time for consistent movement
+        function gameLoop(currentTime) {
+            const deltaTime = Math.min((currentTime - gameState.lastTime) / 16.67, 2.5); // Cap at 2.5x
+            gameState.lastTime = currentTime;
+            
+            updateGame(deltaTime);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateGame(deltaTime) {
+            // Handle army training
+            updateTraining(deltaTime);
+            
             // Move armies and handle combat
             [gameState.player, ...gameState.bots].forEach(owner => {
                 owner.armies.forEach((army, index) => {
@@ -562,16 +648,23 @@
                         const dy = army.target.y - army.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
                         
-                        if (distance > 2) {
-                            army.x += (dx / distance) * 3;
-                            army.y += (dy / distance) * 3;
+                        if (distance > 5) { // Increased minimum distance
+                            // Move towards target (slower with deltaTime)
+                            army.x += (dx / distance) * army.speed * deltaTime;
+                            army.y += (dy / distance) * army.speed * deltaTime;
                             
-                            // Claim territory in radius based on army size
-                            claimTerritory(Math.floor(army.x), Math.floor(army.y), owner.id, Math.floor(army.size / 10));
+                            // Claim territory in a path behind the army (like openfront.io)
+                            if (Math.sqrt((army.x - army.lastX) ** 2 + (army.y - army.lastY) ** 2) > 15) {
+                                claimTerritory(Math.floor(army.x), Math.floor(army.y), owner.id, 3);
+                                army.lastX = army.x;
+                                army.lastY = army.y;
+                            }
                             
                             // Check for combat
                             checkCombat(army, owner);
                         } else {
+                            // Reached target - claim final area
+                            claimTerritory(army.target.x, army.target.y, owner.id, 4);
                             army.target = null;
                             if (gameState.selectedArmy === army) {
                                 gameState.attackTarget = null;
@@ -584,18 +677,18 @@
             // Generate resources from buildings
             gameState.player.buildings.forEach(building => {
                 Object.entries(building.production).forEach(([resource, amount]) => {
-                    gameState.player[resource] += amount;
+                    gameState.player[resource] += amount * deltaTime;
                 });
             });
             
             // Base income from territories
-            gameState.player.gold += gameState.player.territories.size * 0.05;
-            gameState.player.manpower += 0.1;
+            gameState.player.gold += gameState.player.territories.size * 0.02 * deltaTime;
+            gameState.player.manpower += 0.05 * deltaTime;
             
             // Simple bot AI
             gameState.bots.forEach(bot => {
                 bot.armies.forEach(army => {
-                    if (!army.target || Math.random() < 0.008) {
+                    if (!army.target || Math.random() < 0.005) {
                         army.target = {
                             x: Math.random() * gameState.mapSize.width,
                             y: Math.random() * gameState.mapSize.height
@@ -604,7 +697,7 @@
                 });
                 
                 // Bots occasionally build
-                if (Math.random() < 0.002 && bot.gold > 200) {
+                if (Math.random() < 0.001 && bot.gold > 200) {
                     const botTerritories = Array.from(bot.territories);
                     if (botTerritories.length > 0) {
                         const [x, y] = botTerritories[0].split('-').map(Number);
@@ -619,6 +712,30 @@
             updateUI();
         }
 
+        function updateTraining(deltaTime) {
+            if (gameState.player.trainingQueue.length > 0) {
+                gameState.player.trainingProgress += deltaTime * 0.33; // 3 seconds total
+                
+                // Update progress bar
+                const progressBar = document.getElementById('trainingProgress');
+                progressBar.style.width = `${Math.min(gameState.player.trainingProgress, 100)}%`;
+                
+                if (gameState.player.trainingProgress >= 100) {
+                    // Training complete
+                    const territories = Array.from(gameState.player.territories);
+                    if (territories.length > 0) {
+                        const [x, y] = territories[0].split('-').map(Number);
+                        createArmy(x, y, 'player', 15);
+                        addGameLog('Army training complete!');
+                    }
+                    
+                    gameState.player.trainingQueue.shift();
+                    gameState.player.trainingProgress = 0;
+                    progressBar.style.width = '0%';
+                }
+            }
+        }
+
         function checkCombat(army, owner) {
             const enemies = owner.id === 'player' ? gameState.bots : 
                           [gameState.player, ...gameState.bots.filter(b => b.id !== owner.id)];
@@ -631,11 +748,11 @@
                     if (distance < combatRange) {
                         // Combat!
                         if (army.strength > enemyArmy.strength) {
-                            army.strength -= enemyArmy.strength * 0.4;
+                            army.strength -= enemyArmy.strength * 0.3;
                             enemy.armies.splice(enemyIndex, 1);
                             addGameLog(`⚔️ COMBAT: ${owner.id} defeated ${enemy.id}!`);
                         } else {
-                            enemyArmy.strength -= army.strength * 0.4;
+                            enemyArmy.strength -= army.strength * 0.3;
                             owner.armies.splice(owner.armies.indexOf(army), 1);
                             if (gameState.selectedArmy === army) {
                                 gameState.selectedArmy = null;
@@ -657,14 +774,8 @@
             if (gameState.player.gold >= 50 && gameState.player.manpower >= 20) {
                 gameState.player.gold -= 50;
                 gameState.player.manpower -= 20;
-                
-                const territories = Array.from(gameState.player.territories);
-                if (territories.length > 0) {
-                    const [x, y] = territories[0].split('-').map(Number);
-                    createArmy(x, y, 'player', 10);
-                    addGameLog('Trained new army!');
-                }
-                
+                gameState.player.trainingQueue.push('army');
+                addGameLog('Started training new army (3 seconds)...');
                 updateUI();
             } else {
                 addGameLog('Not enough resources!');
@@ -689,7 +800,7 @@
                 
                 if (otherArmy) {
                     mainArmy.strength += otherArmy.strength;
-                    mainArmy.size = Math.max(8, mainArmy.strength / 2);
+                    mainArmy.size = Math.max(10, mainArmy.strength / 1.5);
                     gameState.player.armies.splice(gameState.player.armies.indexOf(otherArmy), 1);
                     addGameLog('Armies merged!');
                     updateUI();
@@ -705,7 +816,7 @@
             // Update army info
             if (gameState.selectedArmy) {
                 document.getElementById('armyInfo').innerHTML = 
-                    `Strength: ${gameState.selectedArmy.strength}<br>Size: ${Math.floor(gameState.selectedArmy.size)}`;
+                    `Strength: ${Math.floor(gameState.selectedArmy.strength)}<br>Size: ${Math.floor(gameState.selectedArmy.size)}`;
             } else {
                 document.getElementById('armyInfo').textContent = 'No army selected';
             }
@@ -720,7 +831,18 @@
             });
             
             document.getElementById('productionInfo').innerHTML = 
-                `Gold: +${goldProduction}/sec<br>Manpower: +${manpowerProduction}/sec<br>Buildings: ${gameState.player.buildings.length}`;
+                `Gold: +${goldProduction.toFixed(1)}/sec<br>Manpower: +${manpowerProduction.toFixed(1)}/sec<br>Buildings: ${gameState.player.buildings.length}`;
+                
+            // Update train button
+            const trainBtn = document.getElementById('trainBtn');
+            const trainTime = document.getElementById('trainTime');
+            if (gameState.player.trainingQueue.length > 0) {
+                trainBtn.disabled = true;
+                trainBtn.textContent = `Training... ${Math.max(0, 3 - gameState.player.trainingProgress).toFixed(1)}s`;
+            } else {
+                trainBtn.disabled = false;
+                trainBtn.innerHTML = 'Train Army (50g) - <span id="trainTime">3s</span>';
+            }
         }
 
         function addGameLog(message) {
@@ -736,7 +858,6 @@
 
         // Start game
         initGame();
-        setInterval(updateGame, 50);
     </script>
 </body>
 </html>
