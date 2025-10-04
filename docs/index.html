@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sovereign.io - Territory Strategy</title>
+    <title>Sovereign.io - Territory Strategy Game</title>
     <style>
         * {
             margin: 0;
@@ -10,709 +10,458 @@
         }
 
         body {
-            background: #0a0a0a;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
             color: white;
             font-family: 'Arial', sans-serif;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 10px;
-            height: 100vh;
+            padding: 20px;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background: #1a1a1a;
-            border-radius: 8px;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .logo {
+            font-size: 4rem;
             margin-bottom: 10px;
+            text-shadow: 0 0 20px #3498db;
         }
 
-        .game-area {
+        .tagline {
+            font-size: 1.2rem;
+            color: #bdc3c7;
+            margin-bottom: 30px;
+        }
+
+        .main-content {
             display: flex;
-            gap: 15px;
+            gap: 40px;
+            align-items: flex-start;
+            justify-content: center;
             flex: 1;
-            min-height: 0;
         }
 
-        .map-container {
-            position: relative;
+        .game-preview {
             flex: 1;
-            background: #111;
-            border-radius: 8px;
+            max-width: 500px;
+            background: rgba(26, 26, 26, 0.8);
+            border-radius: 15px;
+            padding: 20px;
             border: 2px solid #3498db;
+            box-shadow: 0 0 30px rgba(52, 152, 219, 0.3);
         }
 
-        #gameCanvas {
+        .preview-canvas {
             width: 100%;
-            height: 100%;
-            display: block;
-            cursor: crosshair;
-        }
-
-        .control-panel {
-            width: 300px;
-            background: #1a1a1a;
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            overflow-y: auto;
-        }
-
-        .panel-section {
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 6px;
-        }
-
-        .balance-display {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .balance-bar {
-            flex: 1;
-            height: 20px;
-            background: #34495e;
+            height: 300px;
+            background: #111;
             border-radius: 10px;
-            overflow: hidden;
+            margin-bottom: 20px;
+            border: 1px solid #34495e;
         }
 
-        .balance-fill {
-            height: 100%;
-            background: #2ecc71;
-            transition: width 0.3s;
-        }
-
-        .percentage-buttons {
+        .features {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-top: 15px;
         }
 
-        button {
+        .feature {
+            background: #2c3e50;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .login-panel {
+            flex: 1;
+            max-width: 400px;
+            background: rgba(26, 26, 26, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            border: 2px solid #27ae60;
+            box-shadow: 0 0 30px rgba(39, 174, 96, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #bdc3c7;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #34495e;
+            border-radius: 5px;
+            background: #2c3e50;
+            color: white;
+            font-size: 1rem;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px 0;
+        }
+
+        .btn-primary {
             background: #3498db;
             color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.2s;
         }
 
-        button:hover {
+        .btn-primary:hover {
             background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
         }
 
-        .research-tree {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
+        .btn-secondary {
+            background: #27ae60;
+            color: white;
         }
 
-        .research-node {
+        .btn-secondary:hover {
+            background: #219653;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .game-modes {
+            margin: 20px 0;
+        }
+
+        .mode-option {
             background: #34495e;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
             cursor: pointer;
             border: 2px solid transparent;
-            font-size: 12px;
+            transition: all 0.3s ease;
         }
 
-        .research-node.unlocked {
-            background: #27ae60;
+        .mode-option:hover {
+            border-color: #3498db;
+            transform: translateX(5px);
         }
 
-        .research-node.available {
-            border-color: #f39c12;
-        }
-
-        .research-node.locked {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .game-log {
-            height: 120px;
-            overflow-y: auto;
-            font-size: 11px;
-            line-height: 1.3;
-        }
-
-        .game-log div {
-            margin: 2px 0;
-            padding: 2px 5px;
+        .mode-option.selected {
+            border-color: #27ae60;
             background: #2c3e50;
-            border-radius: 3px;
         }
 
-        .mode-indicator {
-            padding: 5px 10px;
-            border-radius: 4px;
+        .player-stats {
+            background: rgba(44, 62, 80, 0.6);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .footer {
             text-align: center;
-            margin-top: 5px;
-            font-size: 12px;
+            margin-top: 40px;
+            padding: 20px;
+            color: #7f8c8d;
+            border-top: 1px solid #34495e;
         }
 
-        .mode-frontline {
-            background: #e74c3c;
+        .contributors {
+            margin-top: 20px;
         }
 
-        .mode-expansion {
-            background: #3498db;
+        .contributor-list {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .contributor {
+            background: #34495e;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏰 Sovereign.io</h1>
-            <div class="balance-display">
-                <span>Balance:</span>
-                <div class="balance-bar">
-                    <div id="balanceFill" class="balance-fill" style="width: 100%"></div>
+            <div class="logo floating">🏰 Sovereign.io</div>
+            <div class="tagline">Territory Conquest Game with Research & Strategy</div>
+        </div>
+
+        <div class="main-content">
+            <div class="game-preview">
+                <h2>🎮 Game Preview</h2>
+                <div class="preview-canvas" id="previewCanvas">
+                    <!-- Animated preview will be drawn here -->
                 </div>
-                <span id="balanceText">1000</span>
-                <span>Income: <span id="incomeText">+50</span></span>
+                <div class="features">
+                    <div class="feature">⚔️ Army Management</div>
+                    <div class="feature">🔬 Research Tree</div>
+                    <div class="feature">🏗️ Building System</div>
+                    <div class="feature">🌐 Multiplayer Ready</div>
+                    <div class="feature">🎯 Strategic Depth</div>
+                    <div class="feature">🚀 Fast-Paced Matches</div>
+                </div>
+                
+                <div class="player-stats">
+                    <h3>📊 Global Stats</h3>
+                    <div class="stat">
+                        <span>Players Online:</span>
+                        <span id="onlineCount">1</span>
+                    </div>
+                    <div class="stat">
+                        <span>Games Today:</span>
+                        <span id="gamesCount">0</span>
+                    </div>
+                    <div class="stat">
+                        <span>Version:</span>
+                        <span>v0.8.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="login-panel">
+                <h2>🚀 Start Playing</h2>
+                <form id="gameStartForm">
+                    <div class="form-group">
+                        <label for="username">👤 Username:</label>
+                        <input type="text" id="username" placeholder="Enter your username" required maxlength="15">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="gameMode">🎯 Game Mode:</label>
+                        <select id="gameMode">
+                            <option value="singleplayer">Single Player vs AI</option>
+                            <option value="multiplayer">Multiplayer (Coming Soon)</option>
+                            <option value="sandbox">Sandbox Mode</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>⚡ Difficulty:</label>
+                        <div class="game-modes">
+                            <div class="mode-option" onclick="selectDifficulty('easy')">
+                                <strong>Easy</strong><br>
+                                <small>3 AI enemies, slower pace</small>
+                            </div>
+                            <div class="mode-option selected" onclick="selectDifficulty('medium')">
+                                <strong>Medium</strong><br>
+                                <small>4 AI enemies, balanced</small>
+                            </div>
+                            <div class="mode-option" onclick="selectDifficulty('hard')">
+                                <strong>Hard</strong><br>
+                                <small>5 AI enemies, aggressive</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary pulse">🎮 Start Game</button>
+                    <button type="button" class="btn btn-secondary" onclick="showTutorial()">📚 Tutorial</button>
+                </form>
+
+                <div class="contributors">
+                    <h3>👥 Development Team</h3>
+                    <div class="contributor-list">
+                        <div class="contributor">@YourName</div>
+                        <div class="contributor">@FirstHelper</div>
+                        <div class="contributor">@NewContributor</div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="game-area">
-            <div class="map-container">
-                <canvas id="gameCanvas" width="800" height="600"></canvas>
-            </div>
-            
-            <div class="control-panel">
-                <div class="panel-section">
-                    <h3>⚔️ Deploy Troops</h3>
-                    <div class="percentage-buttons">
-                        <button onclick="sendTroops(0.1)">Send 10%</button>
-                        <button onclick="sendTroops(0.25)">Send 25%</button>
-                        <button onclick="sendTroops(0.5)">Send 50%</button>
-                        <button onclick="sendTroops(0.75)">Send 75%</button>
-                        <button onclick="sendTroops(1)">Send 100%</button>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <button onclick="toggleMode()" id="modeButton">Switch to Frontline</button>
-                        <div id="modeIndicator" class="mode-indicator mode-expansion">Expansion Mode</div>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3>🔬 Research & Development</h3>
-                    <div class="research-tree">
-                        <div class="research-node locked" onclick="research('military')" id="militaryResearch">
-                            🎯 Military Tactics<br>
-                            <small>Unlocks: Frontline Mode</small>
-                        </div>
-                        <div class="research-node available" onclick="research('economic')" id="economicResearch">
-                            💰 Economic Growth<br>
-                            <small>Cost: 300 Balance</small>
-                        </div>
-                        <div class="research-node locked" onclick="research('expansion')" id="expansionResearch">
-                            🚀 Rapid Expansion<br>
-                            <small>Requires: Economic</small>
-                        </div>
-                        <div class="research-node locked" onclick="research('defense')" id="defenseResearch">
-                            🛡️ Defense Systems<br>
-                            <small>Requires: Military</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-section">
-                    <h3>📊 Game State</h3>
-                    <div>Territories: <span id="territoryCount">1</span></div>
-                    <div>Frontlines: <span id="frontlineCount">0</span></div>
-                    <div>Research: <span id="researchCount">0</span>/4</div>
-                    <div>Enemies: <span id="enemyCount">3</span></div>
-                </div>
-
-                <div class="panel-section">
-                    <h3>📜 Battle Log</h3>
-                    <div id="gameLog" class="game-log"></div>
-                </div>
-            </div>
+        <div class="footer">
+            <p>Sovereign.io - An open-source territory conquest game | 
+               <a href="https://github.com/r293239/Sovereign.io" style="color: #3498db;">GitHub Repository</a>
+            </p>
+            <p>Help us build this game! Contributors welcome 🚀</p>
         </div>
     </div>
 
     <script>
-        // Game State - OpenFront.io inspired core mechanics
-        const gameState = {
-            player: {
-                balance: 1000,
-                maxBalance: 1000,
-                income: 50,
-                territories: new Set(),
-                frontlines: [],
-                research: new Set(),
-                mode: 'expansion' // 'frontline' or 'expansion'
-            },
-            enemies: [],
-            map: [],
-            lastTick: Date.now()
-        };
-
-        // Research requirements
-        const RESEARCH_REQUIREMENTS = {
-            military: { cost: 300, requires: [] },
-            economic: { cost: 300, requires: [] },
-            expansion: { cost: 500, requires: ['economic'] },
-            defense: { cost: 400, requires: ['military'] }
-        };
-
-        // Canvas setup
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const TILE_SIZE = 2;
-
-        // Initialize game
-        function initGame() {
-            createMap();
-            setupPlayer();
-            setupEnemies();
+        // Game preview animation
+        function drawPreview() {
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
             
-            // Game loops
-            setInterval(gameTick, 100);
-            setInterval(incomeTick, 1000);
+            canvas.width = width;
+            canvas.height = height;
             
-            addGameLog('⚔️ Game started! Use percentage buttons to deploy troops.');
-            addGameLog('🔬 Research technologies to unlock new features.');
-            
-            render();
-            updateUI();
-        }
-
-        function createMap() {
-            // Create territory grid
-            for (let x = 0; x < 800; x += TILE_SIZE) {
-                for (let y = 0; y < 600; y += TILE_SIZE) {
-                    gameState.map.push({
-                        x, y,
-                        owner: null,
-                        troops: 0
-                    });
-                }
-            }
-        }
-
-        function setupPlayer() {
-            // Player starts in center
-            const startX = 400;
-            const startY = 300;
-            
-            claimTerritoryArea(startX, startY, 20, 'player');
-        }
-
-        function setupEnemies() {
-            const enemyConfigs = [
-                { x: 100, y: 100, color: '#e74c3c', balance: 800 },
-                { x: 700, y: 100, color: '#f39c12', balance: 800 },
-                { x: 400, y: 500, color: '#9b59b6', balance: 800 }
-            ];
-            
-            enemyConfigs.forEach((config, index) => {
-                const enemy = {
-                    id: `enemy${index}`,
-                    color: config.color,
-                    balance: config.balance,
-                    maxBalance: 800,
-                    income: 40,
-                    territories: new Set(),
-                    frontlines: []
-                };
+            // Draw animated preview
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
                 
-                claimTerritoryArea(config.x, config.y, 15, enemy.id);
-                gameState.enemies.push(enemy);
-            });
-        }
-
-        function claimTerritoryArea(centerX, centerY, radius, owner) {
-            for (let x = centerX - radius; x <= centerX + radius; x += TILE_SIZE) {
-                for (let y = centerY - radius; y <= centerY + radius; y += TILE_SIZE) {
-                    if (x >= 0 && x < 800 && y >= 0 && y < 600) {
-                        const territory = gameState.map.find(t => t.x === x && t.y === y);
-                        if (territory) {
-                            territory.owner = owner;
-                            territory.troops = owner === 'player' ? 10 : 8;
-                            
-                            if (owner === 'player') {
-                                gameState.player.territories.add(`${x}-${y}`);
-                            } else {
-                                const enemy = gameState.enemies.find(e => e.id === owner);
-                                if (enemy) enemy.territories.add(`${x}-${y}`);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        function render() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw territories
-            gameState.map.forEach(territory => {
-                if (territory.owner === 'player') {
-                    ctx.fillStyle = '#2ecc71';
-                } else if (territory.owner) {
-                    const enemy = gameState.enemies.find(e => e.id === territory.owner);
-                    ctx.fillStyle = enemy ? enemy.color : '#34495e';
-                } else {
-                    ctx.fillStyle = '#2c3e50';
-                    return;
-                }
-                
-                ctx.fillRect(territory.x, territory.y, TILE_SIZE, TILE_SIZE);
-            });
-
-            // Draw frontlines
-            gameState.player.frontlines.forEach(frontline => {
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(frontline.x, frontline.y, 6, 0, Math.PI * 2);
-                ctx.stroke();
-            });
-
-            // Draw enemy frontlines
-            gameState.enemies.forEach(enemy => {
-                enemy.frontlines.forEach(frontline => {
-                    ctx.strokeStyle = enemy.color;
-                    ctx.lineWidth = 2;
+                // Draw background grid
+                ctx.strokeStyle = '#34495e';
+                ctx.lineWidth = 1;
+                for (let x = 0; x < width; x += 20) {
                     ctx.beginPath();
-                    ctx.arc(frontline.x, frontline.y, 4, 0, Math.PI * 2);
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
                     ctx.stroke();
+                }
+                for (let y = 0; y < height; y += 20) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+                
+                // Draw player territory (animated expansion)
+                const time = Date.now() * 0.001;
+                const pulse = Math.sin(time * 2) * 0.2 + 0.8;
+                
+                ctx.fillStyle = '#2ecc71';
+                ctx.beginPath();
+                ctx.arc(width/2, height/2, 40 * pulse, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw enemy territories
+                const enemies = [
+                    { x: width * 0.2, y: height * 0.3, color: '#e74c3c' },
+                    { x: width * 0.8, y: height * 0.2, color: '#f39c12' },
+                    { x: width * 0.3, y: height * 0.7, color: '#9b59b6' },
+                    { x: width * 0.7, y: height * 0.8, color: '#1abc9c' }
+                ];
+                
+                enemies.forEach((enemy, index) => {
+                    const enemyPulse = Math.sin(time * 3 + index) * 0.3 + 0.7;
+                    ctx.fillStyle = enemy.color;
+                    ctx.beginPath();
+                    ctx.arc(enemy.x, enemy.y, 25 * enemyPulse, 0, Math.PI * 2);
+                    ctx.fill();
                 });
-            });
+                
+                // Draw research icons
+                ctx.fillStyle = '#3498db';
+                ctx.font = '20px Arial';
+                ctx.fillText('🔬', width/2 - 30, height/2 - 50);
+                ctx.fillText('⚔️', width/2 + 10, height/2 - 50);
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
         }
 
-        // OpenFront.io core mechanic: Percentage-based deployment
-        function sendTroops(percentage) {
-            if (gameState.player.balance <= 0) {
-                addGameLog('❌ Not enough balance!');
+        // Form handling
+        let selectedDifficulty = 'medium';
+
+        function selectDifficulty(difficulty) {
+            selectedDifficulty = difficulty;
+            document.querySelectorAll('.mode-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+
+        function showTutorial() {
+            alert('🎓 Tutorial:\n\n' +
+                  '• Use percentage buttons to deploy troops\n' +
+                  '• Research technologies for advantages\n' +
+                  '• Expand your territory strategically\n' +
+                  '• Defeat AI enemies to win\n\n' +
+                  'More detailed tutorial coming soon!');
+        }
+
+        document.getElementById('gameStartForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const gameMode = document.getElementById('gameMode').value;
+            
+            if (!username) {
+                alert('Please enter a username!');
                 return;
             }
             
-            const troops = Math.floor(gameState.player.balance * percentage);
-            gameState.player.balance -= troops;
+            // Store game settings
+            const gameSettings = {
+                username: username,
+                gameMode: gameMode,
+                difficulty: selectedDifficulty,
+                timestamp: Date.now()
+            };
             
-            if (gameState.player.mode === 'frontline' && gameState.player.frontlines.length > 0) {
-                // Deploy to strategic frontline
-                const frontline = gameState.player.frontlines[0];
-                deployFromPoint(frontline.x, frontline.y, troops, 'player');
-                addGameLog(`🎯 Deployed ${troops} troops to frontline`);
-            } else {
-                // Expansion mode - deploy from borders
-                const borders = findBorderTerritories();
-                if (borders.length > 0) {
-                    const target = borders[Math.floor(Math.random() * borders.length)];
-                    deployFromPoint(target.x, target.y, troops, 'player');
-                    addGameLog(`🌱 Deployed ${troops} troops for expansion`);
-                }
-            }
+            localStorage.setItem('sovereignio_settings', JSON.stringify(gameSettings));
             
-            updateUI();
-            render();
-        }
+            // Redirect to game page
+            window.location.href = 'game.html';
+        });
 
-        function deployFromPoint(x, y, amount, owner) {
-            // Deploy troops in circular pattern from point
-            const deploymentRadius = 20;
-            const territoriesAffected = [];
-            
-            // Find territories in radius
-            gameState.map.forEach(territory => {
-                const distance = Math.sqrt((territory.x - x) ** 2 + (territory.y - y) ** 2);
-                if (distance <= deploymentRadius) {
-                    territoriesAffected.push({
-                        territory,
-                        distance,
-                        weight: 1 - (distance / deploymentRadius)
-                    });
-                }
-            });
-            
-            // Sort by distance and deploy troops
-            territoriesAffected.sort((a, b) => a.distance - b.distance);
-            
-            let remainingTroops = amount;
-            territoriesAffected.forEach(({ territory, weight }) => {
-                if (remainingTroops <= 0) return;
-                
-                const troopAmount = Math.max(1, Math.floor(amount * weight * 0.3));
-                if (troopAmount > remainingTroops) return;
-                
-                if (territory.owner === owner) {
-                    territory.troops += troopAmount;
-                } else {
-                    // Claim territory
-                    const prevOwner = territory.owner;
-                    territory.owner = owner;
-                    territory.troops = troopAmount;
-                    
-                    // Update territory sets
-                    if (owner === 'player') {
-                        gameState.player.territories.add(`${territory.x}-${territory.y}`);
-                        if (prevOwner) {
-                            const enemy = gameState.enemies.find(e => e.id === prevOwner);
-                            if (enemy) enemy.territories.delete(`${territory.x}-${territory.y}`);
-                        }
-                    } else {
-                        const enemy = gameState.enemies.find(e => e.id === owner);
-                        if (enemy) enemy.territories.add(`${territory.x}-${territory.y}`);
-                        if (prevOwner === 'player') {
-                            gameState.player.territories.delete(`${territory.x}-${territory.y}`);
-                        }
-                    }
-                }
-                
-                remainingTroops -= troopAmount;
-            });
+        // Initialize
+        drawPreview();
+        
+        // Update stats (mock data for now)
+        document.getElementById('onlineCount').textContent = Math.floor(Math.random() * 5) + 1;
+        document.getElementById('gamesCount').textContent = Math.floor(Math.random() * 50);
+        
+        // Load saved username if exists
+        const saved = localStorage.getItem('sovereignio_settings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            document.getElementById('username').value = settings.username;
         }
-
-        function findBorderTerritories() {
-            const borders = [];
-            gameState.player.territories.forEach(coord => {
-                const [x, y] = coord.split('-').map(Number);
-                
-                // Check adjacent tiles
-                for (let dx = -TILE_SIZE; dx <= TILE_SIZE; dx += TILE_SIZE) {
-                    for (let dy = -TILE_SIZE; dy <= TILE_SIZE; dy += TILE_SIZE) {
-                        if (dx === 0 && dy === 0) continue;
-                        
-                        const newX = x + dx;
-                        const newY = y + dy;
-                        const adjacent = gameState.map.find(t => t.x === newX && t.y === newY);
-                        
-                        if (adjacent && adjacent.owner !== 'player') {
-                            borders.push(adjacent);
-                        }
-                    }
-                }
-            });
-            return borders;
-        }
-
-        // Research System - Sovereign.io unique feature
-        function research(tech) {
-            const researchInfo = RESEARCH_REQUIREMENTS[tech];
-            if (!researchInfo || !canResearch(tech)) {
-                addGameLog('❌ Research requirements not met!');
-                return;
-            }
-            
-            if (gameState.player.balance >= researchInfo.cost && !gameState.player.research.has(tech)) {
-                gameState.player.balance -= researchInfo.cost;
-                gameState.player.research.add(tech);
-                
-                // Apply research effects
-                switch(tech) {
-                    case 'military':
-                        addGameLog('🎯 Researched Military Tactics! Frontline Mode unlocked.');
-                        updateModeButton();
-                        break;
-                    case 'economic':
-                        gameState.player.income = Math.floor(gameState.player.income * 1.25);
-                        addGameLog('💰 Researched Economic Growth! +25% income');
-                        break;
-                    case 'expansion':
-                        addGameLog('🚀 Researched Rapid Expansion! Larger deployment radius');
-                        break;
-                    case 'defense':
-                        addGameLog('🛡️ Researched Defense Systems! Better territory defense');
-                        break;
-                }
-                
-                updateResearchUI();
-                updateUI();
-            } else {
-                addGameLog('❌ Not enough balance for research!');
-            }
-        }
-
-        function canResearch(tech) {
-            const requirements = RESEARCH_REQUIREMENTS[tech].requires;
-            return requirements.every(req => gameState.player.research.has(req));
-        }
-
-        function updateResearchUI() {
-            Object.keys(RESEARCH_REQUIREMENTS).forEach(tech => {
-                const node = document.getElementById(`${tech}Research`);
-                if (gameState.player.research.has(tech)) {
-                    node.className = 'research-node unlocked';
-                } else if (canResearch(tech)) {
-                    node.className = 'research-node available';
-                } else {
-                    node.className = 'research-node locked';
-                }
-            });
-        }
-
-        // Game ticks
-        function gameTick() {
-            // AI enemy actions
-            gameState.enemies.forEach(enemy => {
-                if (enemy.balance > enemy.maxBalance * 0.2) {
-                    const percentages = [0.1, 0.25, 0.5];
-                    const percent = percentages[Math.floor(Math.random() * percentages.length)];
-                    const troops = Math.floor(enemy.balance * percent);
-                    enemy.balance -= troops;
-                    
-                    // AI deployment logic
-                    const borders = findEnemyBorderTerritories(enemy);
-                    if (borders.length > 0) {
-                        const target = borders[Math.floor(Math.random() * borders.length)];
-                        deployFromPoint(target.x, target.y, troops, enemy.id);
-                    }
-                }
-            });
-            
-            // Auto-update frontlines
-            updateFrontlines();
-            
-            render();
-        }
-
-        function incomeTick() {
-            // Player income
-            const baseIncome = gameState.player.income;
-            const territoryBonus = gameState.player.territories.size * 0.1;
-            gameState.player.balance = Math.min(
-                gameState.player.maxBalance,
-                gameState.player.balance + baseIncome + territoryBonus
-            );
-            
-            // Enemy income
-            gameState.enemies.forEach(enemy => {
-                const enemyBonus = enemy.territories.size * 0.08;
-                enemy.balance = Math.min(
-                    enemy.maxBalance,
-                    enemy.balance + enemy.income + enemyBonus
-                );
-            });
-            
-            updateUI();
-        }
-
-        function updateFrontlines() {
-            // Update player frontlines
-            gameState.player.frontlines = [];
-            const playerBorders = findBorderTerritories();
-            if (playerBorders.length > 0) {
-                // Create frontline from average border position
-                const avgX = playerBorders.reduce((sum, t) => sum + t.x, 0) / playerBorders.length;
-                const avgY = playerBorders.reduce((sum, t) => sum + t.y, 0) / playerBorders.length;
-                gameState.player.frontlines.push({ x: avgX, y: avgY });
-            }
-            
-            // Update enemy frontlines
-            gameState.enemies.forEach(enemy => {
-                enemy.frontlines = [];
-                const enemyBorders = findEnemyBorderTerritories(enemy);
-                if (enemyBorders.length > 0) {
-                    const avgX = enemyBorders.reduce((sum, t) => sum + t.x, 0) / enemyBorders.length;
-                    const avgY = enemyBorders.reduce((sum, t) => sum + t.y, 0) / enemyBorders.length;
-                    enemy.frontlines.push({ x: avgX, y: avgY });
-                }
-            });
-        }
-
-        function findEnemyBorderTerritories(enemy) {
-            const borders = [];
-            enemy.territories.forEach(coord => {
-                const [x, y] = coord.split('-').map(Number);
-                
-                for (let dx = -TILE_SIZE; dx <= TILE_SIZE; dx += TILE_SIZE) {
-                    for (let dy = -TILE_SIZE; dy <= TILE_SIZE; dy += TILE_SIZE) {
-                        if (dx === 0 && dy === 0) continue;
-                        
-                        const newX = x + dx;
-                        const newY = y + dy;
-                        const adjacent = gameState.map.find(t => t.x === newX && t.y === newY);
-                        
-                        if (adjacent && adjacent.owner !== enemy.id) {
-                            borders.push(adjacent);
-                        }
-                    }
-                }
-            });
-            return borders;
-        }
-
-        // UI Functions
-        function updateUI() {
-            const balancePercent = (gameState.player.balance / gameState.player.maxBalance) * 100;
-            document.getElementById('balanceFill').style.width = `${balancePercent}%`;
-            document.getElementById('balanceText').textContent = Math.floor(gameState.player.balance);
-            document.getElementById('incomeText').textContent = `+${gameState.player.income}`;
-            document.getElementById('territoryCount').textContent = gameState.player.territories.size;
-            document.getElementById('frontlineCount').textContent = gameState.player.frontlines.length;
-            document.getElementById('researchCount').textContent = gameState.player.research.size;
-            document.getElementById('enemyCount').textContent = gameState.enemies.length;
-        }
-
-        function toggleMode() {
-            if (!gameState.player.research.has('military')) {
-                addGameLog('❌ Research Military Tactics to unlock Frontline Mode!');
-                return;
-            }
-            
-            gameState.player.mode = gameState.player.mode === 'expansion' ? 'frontline' : 'expansion';
-            updateModeButton();
-            
-            const modeText = gameState.player.mode === 'frontline' ? 'Frontline' : 'Expansion';
-            const modeClass = gameState.player.mode === 'frontline' ? 'mode-frontline' : 'mode-expansion';
-            
-            document.getElementById('modeIndicator').textContent = `${modeText} Mode`;
-            document.getElementById('modeIndicator').className = `mode-indicator ${modeClass}`;
-            
-            addGameLog(`🎯 Switched to ${modeText} Mode`);
-        }
-
-        function updateModeButton() {
-            const button = document.getElementById('modeButton');
-            if (!gameState.player.research.has('military')) {
-                button.textContent = 'Research Military First';
-                button.disabled = true;
-                button.style.background = '#7f8c8d';
-            } else {
-                const nextMode = gameState.player.mode === 'expansion' ? 'Frontline' : 'Expansion';
-                button.textContent = `Switch to ${nextMode}`;
-                button.disabled = false;
-                button.style.background = '';
-            }
-        }
-
-        function addGameLog(message) {
-            const log = document.getElementById('gameLog');
-            const entry = document.createElement('div');
-            entry.textContent = message;
-            log.prepend(entry);
-            
-            while (log.children.length > 8) {
-                log.removeChild(log.lastChild);
-            }
-        }
-
-        // Initialize game
-        initGame();
-        updateResearchUI();
-        updateModeButton();
     </script>
 </body>
 </html>
