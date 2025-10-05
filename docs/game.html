@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -77,35 +76,54 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(26, 26, 26, 0.9);
+            background: rgba(26, 26, 26, 0.95);
             padding: 15px;
             border-radius: 10px;
             border: 2px solid #3498db;
             display: flex;
+            flex-direction: column;
             gap: 10px;
+            min-width: 300px;
+        }
+
+        .target-info {
+            text-align: center;
+            padding: 5px;
+            background: #2c3e50;
+            border-radius: 5px;
+            font-size: 14px;
         }
 
         .percentage-buttons {
             display: flex;
             gap: 5px;
+            justify-content: center;
         }
 
         button {
             background: #3498db;
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 8px 12px;
             border-radius: 5px;
             cursor: pointer;
             transition: background 0.2s;
+            flex: 1;
         }
 
         button:hover {
             background: #2980b9;
         }
 
+        button.active {
+            background: #e74c3c;
+            box-shadow: 0 0 10px #e74c3c;
+        }
+
         .menu-btn {
             background: #e74c3c;
+            flex: none;
+            padding: 10px 15px;
         }
 
         .menu-btn:hover {
@@ -146,15 +164,16 @@
 
         .game-log {
             position: absolute;
-            bottom: 100px;
+            bottom: 120px;
             left: 20px;
-            background: rgba(26, 26, 26, 0.8);
+            background: rgba(26, 26, 26, 0.9);
             padding: 10px;
             border-radius: 5px;
             max-width: 300px;
             max-height: 150px;
             overflow-y: auto;
             font-size: 12px;
+            border: 1px solid #34495e;
         }
 
         .log-entry {
@@ -162,6 +181,40 @@
             padding: 2px 5px;
             background: #2c3e50;
             border-radius: 3px;
+        }
+
+        .attack-indicator {
+            position: absolute;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .crosshair {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .crosshair::before, .crosshair::after {
+            content: '';
+            position: absolute;
+            background: #ff0000;
+        }
+
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
         }
     </style>
 </head>
@@ -186,12 +239,18 @@
             <canvas id="gameCanvas"></canvas>
             
             <div class="control-overlay">
+                <div class="target-info" id="targetInfo">
+                    Click on map to set attack target
+                </div>
                 <div class="percentage-buttons">
-                    <button onclick="sendTroops(0.1)">10%</button>
-                    <button onclick="sendTroops(0.25)">25%</button>
-                    <button onclick="sendTroops(0.5)">50%</button>
-                    <button onclick="sendTroops(0.75)">75%</button>
-                    <button onclick="sendTroops(1)">100%</button>
+                    <button onclick="setPercentage(0.1)">10%</button>
+                    <button onclick="setPercentage(0.2)" class="active" id="percent20">20%</button>
+                    <button onclick="setPercentage(0.5)">50%</button>
+                    <button onclick="setPercentage(0.75)">75%</button>
+                    <button onclick="setPercentage(1)">100%</button>
+                </div>
+                <div class="percentage-buttons">
+                    <button onclick="sendTroops()" style="background: #27ae60;">🚀 DEPLOY TROOPS</button>
                 </div>
             </div>
 
@@ -203,13 +262,14 @@
             </div>
 
             <div class="game-log" id="gameLog">
-                <div class="log-entry">Game started! Deploy troops to expand.</div>
+                <div class="log-entry">Click anywhere on map to set attack target</div>
+                <div class="log-entry">Then use percentage buttons and DEPLOY</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Game State - OpenFront.io exact mechanics
+        // Game State
         const gameState = {
             player: {
                 id: 'player',
@@ -219,14 +279,17 @@
                 maxBalance: 1000,
                 income: 50,
                 territories: new Set(),
-                troops: 1000
+                troops: []
             },
             enemies: [],
             map: [],
             cells: {},
             lastTick: Date.now(),
             gameSize: { width: 0, height: 0 },
-            cellSize: 4
+            cellSize: 4,
+            attackTarget: null,
+            selectedPercentage: 0.2, // Default 20%
+            movingTroops: []
         };
 
         // Canvas setup
@@ -237,7 +300,7 @@
         function initGame() {
             // Set canvas size to window
             gameState.gameSize.width = window.innerWidth;
-            gameState.gameSize.height = window.innerHeight - 60; // Account for header
+            gameState.gameSize.height = window.innerHeight - 60;
             canvas.width = gameState.gameSize.width;
             canvas.height = gameState.gameSize.height;
 
@@ -254,7 +317,8 @@
             requestAnimationFrame(gameLoop);
             setInterval(incomeTick, 1000);
             
-            addGameLog('Game started! Use percentage buttons to deploy troops.');
+            addGameLog('Click anywhere on map to set attack target');
+            addGameLog('Then use percentage buttons and DEPLOY TROOPS');
             updateUI();
         }
 
@@ -262,7 +326,7 @@
             const { width, height } = gameState.gameSize;
             const { cellSize } = gameState;
             
-            // Create grid cells (like OpenFront.io)
+            // Create grid cells
             for (let x = 0; x < width; x += cellSize) {
                 for (let y = 0; y < height; y += cellSize) {
                     const cellId = `${Math.floor(x/cellSize)}-${Math.floor(y/cellSize)}`;
@@ -279,7 +343,7 @@
         function setupPlayer() {
             const { width, height } = gameState.gameSize;
             
-            // Player starts in center with a decent territory
+            // Player starts in center
             const startX = Math.floor(width / 2 / gameState.cellSize);
             const startY = Math.floor(height / 2 / gameState.cellSize);
             const startRadius = 8;
@@ -324,7 +388,6 @@
                     maxBalance: 800,
                     income: 40,
                     territories: new Set(),
-                    troops: 800,
                     aggression: difficulty === 'hard' ? 0.4 : difficulty === 'medium' ? 0.3 : 0.2
                 };
                 
@@ -367,12 +430,12 @@
                     const enemy = gameState.enemies.find(e => e.id === cell.owner);
                     ctx.fillStyle = enemy ? enemy.color : '#34495e';
                 } else {
-                    ctx.fillStyle = '#2c3e50'; // Neutral
+                    ctx.fillStyle = '#2c3e50';
                 }
                 
                 ctx.fillRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
                 
-                // Draw troop concentration (darker for more troops)
+                // Draw troop concentration
                 if (cell.troops > 10) {
                     const alpha = Math.min(cell.troops / 100, 0.8);
                     ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
@@ -380,114 +443,121 @@
                 }
             });
 
-            // Draw borders between territories
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-            ctx.lineWidth = 1;
-            gameState.map.forEach(cell => {
-                if (cell.owner) {
-                    // Check adjacent cells for different owners
-                    const adjacent = getAdjacentCells(cell);
-                    adjacent.forEach(adjCell => {
-                        if (adjCell && adjCell.owner !== cell.owner) {
-                            ctx.strokeRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
-                        }
-                    });
-                }
+            // Draw moving troops
+            gameState.movingTroops.forEach(troop => {
+                ctx.fillStyle = gameState.player.color;
+                ctx.beginPath();
+                ctx.arc(troop.x, troop.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw movement line
+                ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(troop.startX, troop.startY);
+                ctx.lineTo(troop.x, troop.y);
+                ctx.stroke();
             });
+
+            // Draw attack target
+            if (gameState.attackTarget) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(gameState.attackTarget.x, gameState.attackTarget.y, 10, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Draw crosshair
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(gameState.attackTarget.x - 8, gameState.attackTarget.y);
+                ctx.lineTo(gameState.attackTarget.x + 8, gameState.attackTarget.y);
+                ctx.moveTo(gameState.attackTarget.x, gameState.attackTarget.y - 8);
+                ctx.lineTo(gameState.attackTarget.x, gameState.attackTarget.y + 8);
+                ctx.stroke();
+            }
         }
 
-        function getAdjacentCells(cell) {
-            const [x, y] = cell.id.split('-').map(Number);
-            const adjacent = [];
+        // Click to set attack target
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
             
-            const directions = [
-                [x-1, y], [x+1, y], [x, y-1], [x, y+1]
-            ];
+            gameState.attackTarget = { x, y };
             
-            directions.forEach(([adjX, adjY]) => {
-                const adjId = `${adjX}-${adjY}`;
-                if (gameState.cells[adjId]) {
-                    adjacent.push(gameState.cells[adjId]);
-                }
+            // Find the cell coordinates
+            const cellX = Math.floor(x / gameState.cellSize);
+            const cellY = Math.floor(y / gameState.cellSize);
+            
+            updateTargetInfo();
+            addGameLog(`Attack target set at (${cellX}, ${cellY})`);
+            render();
+        });
+
+        function setPercentage(percent) {
+            gameState.selectedPercentage = percent;
+            
+            // Update button styles
+            document.querySelectorAll('.percentage-buttons button').forEach(btn => {
+                btn.classList.remove('active');
             });
+            event.target.classList.add('active');
             
-            return adjacent;
+            updateTargetInfo();
         }
 
-        // OpenFront.io core mechanic: Percentage deployment
-        function sendTroops(percentage) {
+        function sendTroops() {
+            if (!gameState.attackTarget) {
+                addGameLog('Please set an attack target first!');
+                return;
+            }
+            
             if (gameState.player.balance <= 0) {
                 addGameLog('Not enough balance!');
                 return;
             }
             
-            const troopsToSend = Math.floor(gameState.player.balance * percentage);
+            const troopsToSend = Math.floor(gameState.player.balance * gameState.selectedPercentage);
             gameState.player.balance -= troopsToSend;
             
-            // Deploy from player's border cells
-            const borderCells = getBorderCells();
-            if (borderCells.length === 0) return;
+            // Find player territories to send troops from
+            const playerTerritories = Array.from(gameState.player.territories).map(id => gameState.cells[id]);
+            if (playerTerritories.length === 0) return;
             
-            // Distribute troops among border cells
-            const troopsPerCell = Math.max(1, Math.floor(troopsToSend / borderCells.length));
+            // Send troops from random player territories toward target
+            const troopsPerSource = Math.max(1, Math.floor(troopsToSend / Math.min(5, playerTerritories.length)));
             
-            borderCells.forEach(cell => {
-                // Find adjacent neutral/enemy cells
-                const adjacent = getAdjacentCells(cell);
-                const targetCells = adjacent.filter(adj => !adj.owner || adj.owner !== 'player');
+            for (let i = 0; i < Math.min(5, playerTerritories.length); i++) {
+                const source = playerTerritories[Math.floor(Math.random() * playerTerritories.length)];
                 
-                if (targetCells.length > 0) {
-                    const target = targetCells[Math.floor(Math.random() * targetCells.length)];
-                    deployTroops(cell, target, troopsPerCell);
-                }
-            });
+                gameState.movingTroops.push({
+                    x: source.x + gameState.cellSize / 2,
+                    y: source.y + gameState.cellSize / 2,
+                    startX: source.x + gameState.cellSize / 2,
+                    startY: source.y + gameState.cellSize / 2,
+                    targetX: gameState.attackTarget.x,
+                    targetY: gameState.attackTarget.y,
+                    strength: troopsPerSource,
+                    progress: 0,
+                    speed: 2
+                });
+            }
             
-            addGameLog(`Deployed ${troopsToSend} troops (${percentage * 100}%)`);
+            addGameLog(`Deploying ${troopsToSend} troops (${gameState.selectedPercentage * 100}%) to target`);
             updateUI();
         }
 
-        function getBorderCells() {
-            const borderCells = [];
-            
-            gameState.player.territories.forEach(cellId => {
-                const cell = gameState.cells[cellId];
-                const adjacent = getAdjacentCells(cell);
-                const hasEnemyAdjacent = adjacent.some(adj => !adj.owner || adj.owner !== 'player');
-                
-                if (hasEnemyAdjacent) {
-                    borderCells.push(cell);
-                }
-            });
-            
-            return borderCells;
-        }
-
-        function deployTroops(fromCell, toCell, amount) {
-            if (!toCell.owner) {
-                // Claim neutral territory
-                toCell.owner = 'player';
-                toCell.troops = amount;
-                gameState.player.territories.add(toCell.id);
-            } else if (toCell.owner === 'player') {
-                // Reinforce existing territory
-                toCell.troops += amount;
+        function updateTargetInfo() {
+            const targetInfo = document.getElementById('targetInfo');
+            if (gameState.attackTarget) {
+                const cellX = Math.floor(gameState.attackTarget.x / gameState.cellSize);
+                const cellY = Math.floor(gameState.attackTarget.y / gameState.cellSize);
+                const troops = Math.floor(gameState.player.balance * gameState.selectedPercentage);
+                targetInfo.textContent = `Target: (${cellX}, ${cellY}) | ${gameState.selectedPercentage * 100}% = ${troops} troops`;
             } else {
-                // Attack enemy territory
-                toCell.troops -= amount;
-                if (toCell.troops <= 0) {
-                    // Capture territory
-                    const previousOwner = toCell.owner;
-                    toCell.owner = 'player';
-                    toCell.troops = Math.abs(toCell.troops);
-                    gameState.player.territories.add(toCell.id);
-                    
-                    // Remove from enemy
-                    const enemy = gameState.enemies.find(e => e.id === previousOwner);
-                    if (enemy) {
-                        enemy.territories.delete(toCell.id);
-                        addGameLog(`Captured territory from ${enemy.name}!`);
-                    }
-                }
+                targetInfo.textContent = 'Click on map to set attack target';
             }
         }
 
@@ -496,74 +566,113 @@
             const deltaTime = (currentTime - gameState.lastTick) / 1000;
             gameState.lastTick = currentTime;
             
+            // Update moving troops
+            gameState.movingTroops = gameState.movingTroops.filter(troop => {
+                troop.progress += troop.speed * deltaTime;
+                
+                const dx = troop.targetX - troop.startX;
+                const dy = troop.targetY - troop.startY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const progressRatio = Math.min(troop.progress / distance, 1);
+                
+                troop.x = troop.startX + dx * progressRatio;
+                troop.y = troop.startY + dy * progressRatio;
+                
+                // Check if reached target
+                if (progressRatio >= 1) {
+                    deployTroopsToCell(troop);
+                    return false; // Remove this troop
+                }
+                
+                return true;
+            });
+            
             // AI enemy actions
             gameState.enemies.forEach(enemy => {
-                if (enemy.balance > enemy.maxBalance * enemy.aggression) {
-                    const percent = 0.25; // AI sends 25% of balance
+                if (enemy.balance > enemy.maxBalance * enemy.aggression && Math.random() < 0.02) {
+                    const percent = 0.2;
                     const troops = Math.floor(enemy.balance * percent);
                     enemy.balance -= troops;
                     
-                    const borderCells = getEnemyBorderCells(enemy);
-                    if (borderCells.length > 0) {
-                        const troopsPerCell = Math.max(1, Math.floor(troops / borderCells.length));
+                    const enemyTerritories = Array.from(enemy.territories).map(id => gameState.cells[id]);
+                    if (enemyTerritories.length > 0) {
+                        const source = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
+                        const targetX = Math.random() * gameState.gameSize.width;
+                        const targetY = Math.random() * gameState.gameSize.height;
                         
-                        borderCells.forEach(cell => {
-                            const adjacent = getAdjacentCells(cell);
-                            const targetCells = adjacent.filter(adj => !adj.owner || adj.owner !== enemy.id);
-                            
-                            if (targetCells.length > 0) {
-                                const target = targetCells[Math.floor(Math.random() * targetCells.length)];
-                                deployAITroops(cell, target, troopsPerCell, enemy);
-                            }
-                        });
+                        // Simple AI troop movement (could be enhanced)
+                        const targetCell = findCellAt(targetX, targetY);
+                        if (targetCell && targetCell.owner !== enemy.id) {
+                            deployAITroops(source, targetCell, troops, enemy);
+                        }
                     }
                 }
             });
             
             render();
-            updateUI();
             requestAnimationFrame(gameLoop);
         }
 
-        function getEnemyBorderCells(enemy) {
-            const borderCells = [];
+        function deployTroopsToCell(troop) {
+            const targetCell = findCellAt(troop.targetX, troop.targetY);
+            if (!targetCell) return;
             
-            enemy.territories.forEach(cellId => {
-                const cell = gameState.cells[cellId];
-                const adjacent = getAdjacentCells(cell);
-                const hasEnemyAdjacent = adjacent.some(adj => !adj.owner || adj.owner !== enemy.id);
-                
-                if (hasEnemyAdjacent) {
-                    borderCells.push(cell);
-                }
-            });
-            
-            return borderCells;
-        }
-
-        function deployAITroops(fromCell, toCell, amount, enemy) {
-            if (!toCell.owner) {
-                toCell.owner = enemy.id;
-                toCell.troops = amount;
-                enemy.territories.add(toCell.id);
-            } else if (toCell.owner === enemy.id) {
-                toCell.troops += amount;
+            if (!targetCell.owner) {
+                // Claim neutral territory
+                targetCell.owner = 'player';
+                targetCell.troops = troop.strength;
+                gameState.player.territories.add(targetCell.id);
+                addGameLog(`Claimed new territory at (${Math.floor(troop.targetX/gameState.cellSize)}, ${Math.floor(troop.targetY/gameState.cellSize)})`);
+            } else if (targetCell.owner === 'player') {
+                // Reinforce existing territory
+                targetCell.troops += troop.strength;
             } else {
-                toCell.troops -= amount;
-                if (toCell.troops <= 0) {
-                    const previousOwner = toCell.owner;
-                    toCell.owner = enemy.id;
-                    toCell.troops = Math.abs(toCell.troops);
-                    enemy.territories.add(toCell.id);
+                // Attack enemy territory
+                targetCell.troops -= troop.strength;
+                if (targetCell.troops <= 0) {
+                    // Capture territory
+                    const previousOwner = targetCell.owner;
+                    targetCell.owner = 'player';
+                    targetCell.troops = Math.abs(targetCell.troops);
+                    gameState.player.territories.add(targetCell.id);
                     
-                    if (previousOwner === 'player') {
-                        gameState.player.territories.delete(toCell.id);
-                    } else {
-                        const otherEnemy = gameState.enemies.find(e => e.id === previousOwner);
-                        if (otherEnemy) otherEnemy.territories.delete(toCell.id);
+                    // Remove from enemy
+                    const enemy = gameState.enemies.find(e => e.id === previousOwner);
+                    if (enemy) {
+                        enemy.territories.delete(targetCell.id);
+                        addGameLog(`Captured territory from ${enemy.name}!`);
                     }
                 }
             }
+        }
+
+        function deployAITroops(source, target, amount, enemy) {
+            // Simple AI troop deployment
+            if (!target.owner) {
+                target.owner = enemy.id;
+                target.troops = amount;
+                enemy.territories.add(target.id);
+            } else if (target.owner === enemy.id) {
+                target.troops += amount;
+            } else {
+                target.troops -= amount;
+                if (target.troops <= 0) {
+                    const previousOwner = target.owner;
+                    target.owner = enemy.id;
+                    target.troops = Math.abs(target.troops);
+                    enemy.territories.add(target.id);
+                    
+                    if (previousOwner === 'player') {
+                        gameState.player.territories.delete(target.id);
+                    }
+                }
+            }
+        }
+
+        function findCellAt(x, y) {
+            const cellX = Math.floor(x / gameState.cellSize);
+            const cellY = Math.floor(y / gameState.cellSize);
+            return gameState.cells[`${cellX}-${cellY}`];
         }
 
         function incomeTick() {
@@ -584,9 +693,7 @@
                 );
             });
             
-            // Check win/lose conditions
             checkGameState();
-            
             updateUI();
         }
 
@@ -628,6 +735,7 @@
             document.getElementById('balanceFill').style.width = `${balancePercent}%`;
             document.getElementById('balanceText').textContent = Math.floor(gameState.player.balance);
             document.getElementById('incomeText').textContent = `+${gameState.player.income}`;
+            updateTargetInfo();
         }
 
         function updateEnemyList() {
@@ -655,10 +763,8 @@
             entry.textContent = message;
             log.appendChild(entry);
             
-            // Auto-scroll to bottom
             log.scrollTop = log.scrollHeight;
             
-            // Keep only last 10 messages
             while (log.children.length > 10) {
                 log.removeChild(log.firstChild);
             }
