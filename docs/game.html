@@ -1,88 +1,680 @@
+
 <!DOCTYPE html>
 <html>
 <head>
     <title>Sovereign.io - Game</title>
     <style>
-        /* Copy all the game CSS from our previous working version */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a0a0a; color: white; font-family: Arial; overflow: hidden; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 10px; height: 100vh; display: flex; flex-direction: column; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: #1a1a1a; border-radius: 8px; margin-bottom: 10px; }
-        .game-area { display: flex; gap: 15px; flex: 1; min-height: 0; }
-        .map-container { position: relative; flex: 1; background: #111; border-radius: 8px; border: 2px solid #3498db; }
-        #gameCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-        .control-panel { width: 300px; background: #1a1a1a; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-        /* ... include all the other game CSS rules from before ... */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #1a1a1a;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .balance-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .balance-bar {
+            width: 200px;
+            height: 20px;
+            background: #34495e;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .balance-fill {
+            height: 100%;
+            background: #2ecc71;
+            transition: width 0.3s;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            cursor: crosshair;
+        }
+
+        .control-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 26, 26, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #3498db;
+            display: flex;
+            gap: 10px;
+        }
+
+        .percentage-buttons {
+            display: flex;
+            gap: 5px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .menu-btn {
+            background: #e74c3c;
+        }
+
+        .menu-btn:hover {
+            background: #c0392b;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(26, 26, 26, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #27ae60;
+            min-width: 200px;
+        }
+
+        .enemy-list {
+            margin-top: 10px;
+        }
+
+        .enemy-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            margin: 2px 0;
+            background: #2c3e50;
+            border-radius: 3px;
+        }
+
+        .enemy-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .game-log {
+            position: absolute;
+            bottom: 100px;
+            left: 20px;
+            background: rgba(26, 26, 26, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 300px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 5px;
+            background: #2c3e50;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏰 Sovereign.io - <span id="playerName">Player</span></h1>
-            <div class="balance-display">
-                <span>Balance:</span>
-                <div class="balance-bar"><div id="balanceFill" class="balance-fill" style="width: 100%"></div></div>
-                <span id="balanceText">1000</span>
+            <div class="player-info">
+                <h1>🏰 <span id="playerName">Player</span></h1>
+                <div class="balance-display">
+                    <span>Balance:</span>
+                    <div class="balance-bar">
+                        <div id="balanceFill" class="balance-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="balanceText">1000</span>
+                    <span>Income: <span id="incomeText">+50</span></span>
+                </div>
             </div>
-            <button onclick="window.location.href = 'index.html'">← Main Menu</button>
+            <button class="menu-btn" onclick="window.location.href = 'index.html'">Menu</button>
         </div>
 
         <div class="game-area">
-            <div class="map-container">
-                <canvas id="gameCanvas" width="800" height="600"></canvas>
-            </div>
+            <canvas id="gameCanvas"></canvas>
             
-            <div class="control-panel">
-                <!-- Include all the game control panels from before -->
-                <div class="panel-section">
-                    <h3>⚔️ Deploy Troops</h3>
-                    <div class="percentage-buttons">
-                        <button onclick="sendTroops(0.1)">Send 10%</button>
-                        <button onclick="sendTroops(0.25)">Send 25%</button>
-                        <button onclick="sendTroops(0.5)">Send 50%</button>
-                        <button onclick="sendTroops(0.75)">Send 75%</button>
-                        <button onclick="sendTroops(1)">Send 100%</button>
-                    </div>
+            <div class="control-overlay">
+                <div class="percentage-buttons">
+                    <button onclick="sendTroops(0.1)">10%</button>
+                    <button onclick="sendTroops(0.25)">25%</button>
+                    <button onclick="sendTroops(0.5)">50%</button>
+                    <button onclick="sendTroops(0.75)">75%</button>
+                    <button onclick="sendTroops(1)">100%</button>
                 </div>
+            </div>
 
-                <!-- Include research tree, game info, etc. -->
+            <div class="info-panel">
+                <h3>Enemies</h3>
+                <div class="enemy-list" id="enemyList">
+                    <!-- Enemy list will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="game-log" id="gameLog">
+                <div class="log-entry">Game started! Deploy troops to expand.</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Load game settings
-        const settings = JSON.parse(localStorage.getItem('sovereignio_settings') || '{}');
-        document.getElementById('playerName').textContent = settings.username || 'Player';
-
-        // Include all the game JavaScript from our working version
+        // Game State - OpenFront.io exact mechanics
         const gameState = {
             player: {
+                id: 'player',
+                name: 'Player',
+                color: '#2ecc71',
                 balance: 1000,
                 maxBalance: 1000,
                 income: 50,
                 territories: new Set(),
-                frontlines: [],
-                research: new Set(),
-                mode: 'expansion',
-                username: settings.username || 'Player'
+                troops: 1000
             },
             enemies: [],
             map: [],
-            difficulty: settings.difficulty || 'medium'
+            cells: {},
+            lastTick: Date.now(),
+            gameSize: { width: 0, height: 0 },
+            cellSize: 4
         };
 
-        // Initialize the game with settings
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Initialize game
         function initGame() {
-            // Your existing game initialization code here
+            // Set canvas size to window
+            gameState.gameSize.width = window.innerWidth;
+            gameState.gameSize.height = window.innerHeight - 60; // Account for header
+            canvas.width = gameState.gameSize.width;
+            canvas.height = gameState.gameSize.height;
+
+            // Load player settings
+            const settings = JSON.parse(localStorage.getItem('sovereignio_settings') || '{}');
+            gameState.player.name = settings.username || 'Player';
+            document.getElementById('playerName').textContent = gameState.player.name;
+
             createMap();
             setupPlayer();
-            setupEnemies();
-            // ... etc
+            setupEnemies(settings.difficulty || 'medium');
+            
+            // Start game loops
+            requestAnimationFrame(gameLoop);
+            setInterval(incomeTick, 1000);
+            
+            addGameLog('Game started! Use percentage buttons to deploy troops.');
+            updateUI();
         }
 
-        // Start the game
-        initGame();
+        function createMap() {
+            const { width, height } = gameState.gameSize;
+            const { cellSize } = gameState;
+            
+            // Create grid cells (like OpenFront.io)
+            for (let x = 0; x < width; x += cellSize) {
+                for (let y = 0; y < height; y += cellSize) {
+                    const cellId = `${Math.floor(x/cellSize)}-${Math.floor(y/cellSize)}`;
+                    gameState.cells[cellId] = {
+                        x, y,
+                        owner: null,
+                        troops: 0
+                    };
+                    gameState.map.push(gameState.cells[cellId]);
+                }
+            }
+        }
+
+        function setupPlayer() {
+            const { width, height } = gameState.gameSize;
+            
+            // Player starts in center with a decent territory
+            const startX = Math.floor(width / 2 / gameState.cellSize);
+            const startY = Math.floor(height / 2 / gameState.cellSize);
+            const startRadius = 8;
+            
+            for (let dx = -startRadius; dx <= startRadius; dx++) {
+                for (let dy = -startRadius; dy <= startRadius; dy++) {
+                    if (dx * dx + dy * dy <= startRadius * startRadius) {
+                        const cellX = startX + dx;
+                        const cellY = startY + dy;
+                        const cellId = `${cellX}-${cellY}`;
+                        
+                        if (gameState.cells[cellId]) {
+                            gameState.cells[cellId].owner = 'player';
+                            gameState.cells[cellId].troops = 50;
+                            gameState.player.territories.add(cellId);
+                        }
+                    }
+                }
+            }
+        }
+
+        function setupEnemies(difficulty) {
+            const { width, height } = gameState.gameSize;
+            const enemyCount = difficulty === 'easy' ? 3 : difficulty === 'medium' ? 4 : 5;
+            const enemyColors = ['#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#e67e22'];
+            
+            const positions = [
+                { x: width * 0.2, y: height * 0.2 },
+                { x: width * 0.8, y: height * 0.2 },
+                { x: width * 0.2, y: height * 0.8 },
+                { x: width * 0.8, y: height * 0.8 },
+                { x: width * 0.5, y: height * 0.1 }
+            ];
+            
+            for (let i = 0; i < enemyCount; i++) {
+                const pos = positions[i];
+                const enemy = {
+                    id: `enemy${i}`,
+                    name: `Enemy ${i+1}`,
+                    color: enemyColors[i],
+                    balance: 800,
+                    maxBalance: 800,
+                    income: 40,
+                    territories: new Set(),
+                    troops: 800,
+                    aggression: difficulty === 'hard' ? 0.4 : difficulty === 'medium' ? 0.3 : 0.2
+                };
+                
+                // Setup enemy territory
+                const startX = Math.floor(pos.x / gameState.cellSize);
+                const startY = Math.floor(pos.y / gameState.cellSize);
+                const startRadius = 6;
+                
+                for (let dx = -startRadius; dx <= startRadius; dx++) {
+                    for (let dy = -startRadius; dy <= startRadius; dy++) {
+                        if (dx * dx + dy * dy <= startRadius * startRadius) {
+                            const cellX = startX + dx;
+                            const cellY = startY + dy;
+                            const cellId = `${cellX}-${cellY}`;
+                            
+                            if (gameState.cells[cellId] && !gameState.cells[cellId].owner) {
+                                gameState.cells[cellId].owner = enemy.id;
+                                gameState.cells[cellId].troops = 40;
+                                enemy.territories.add(cellId);
+                            }
+                        }
+                    }
+                }
+                
+                gameState.enemies.push(enemy);
+            }
+            
+            updateEnemyList();
+        }
+
+        function render() {
+            const { width, height } = gameState.gameSize;
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw all cells
+            gameState.map.forEach(cell => {
+                if (cell.owner === 'player') {
+                    ctx.fillStyle = gameState.player.color;
+                } else if (cell.owner) {
+                    const enemy = gameState.enemies.find(e => e.id === cell.owner);
+                    ctx.fillStyle = enemy ? enemy.color : '#34495e';
+                } else {
+                    ctx.fillStyle = '#2c3e50'; // Neutral
+                }
+                
+                ctx.fillRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
+                
+                // Draw troop concentration (darker for more troops)
+                if (cell.troops > 10) {
+                    const alpha = Math.min(cell.troops / 100, 0.8);
+                    ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+                    ctx.fillRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
+                }
+            });
+
+            // Draw borders between territories
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            gameState.map.forEach(cell => {
+                if (cell.owner) {
+                    // Check adjacent cells for different owners
+                    const adjacent = getAdjacentCells(cell);
+                    adjacent.forEach(adjCell => {
+                        if (adjCell && adjCell.owner !== cell.owner) {
+                            ctx.strokeRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
+                        }
+                    });
+                }
+            });
+        }
+
+        function getAdjacentCells(cell) {
+            const [x, y] = cell.id.split('-').map(Number);
+            const adjacent = [];
+            
+            const directions = [
+                [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+            ];
+            
+            directions.forEach(([adjX, adjY]) => {
+                const adjId = `${adjX}-${adjY}`;
+                if (gameState.cells[adjId]) {
+                    adjacent.push(gameState.cells[adjId]);
+                }
+            });
+            
+            return adjacent;
+        }
+
+        // OpenFront.io core mechanic: Percentage deployment
+        function sendTroops(percentage) {
+            if (gameState.player.balance <= 0) {
+                addGameLog('Not enough balance!');
+                return;
+            }
+            
+            const troopsToSend = Math.floor(gameState.player.balance * percentage);
+            gameState.player.balance -= troopsToSend;
+            
+            // Deploy from player's border cells
+            const borderCells = getBorderCells();
+            if (borderCells.length === 0) return;
+            
+            // Distribute troops among border cells
+            const troopsPerCell = Math.max(1, Math.floor(troopsToSend / borderCells.length));
+            
+            borderCells.forEach(cell => {
+                // Find adjacent neutral/enemy cells
+                const adjacent = getAdjacentCells(cell);
+                const targetCells = adjacent.filter(adj => !adj.owner || adj.owner !== 'player');
+                
+                if (targetCells.length > 0) {
+                    const target = targetCells[Math.floor(Math.random() * targetCells.length)];
+                    deployTroops(cell, target, troopsPerCell);
+                }
+            });
+            
+            addGameLog(`Deployed ${troopsToSend} troops (${percentage * 100}%)`);
+            updateUI();
+        }
+
+        function getBorderCells() {
+            const borderCells = [];
+            
+            gameState.player.territories.forEach(cellId => {
+                const cell = gameState.cells[cellId];
+                const adjacent = getAdjacentCells(cell);
+                const hasEnemyAdjacent = adjacent.some(adj => !adj.owner || adj.owner !== 'player');
+                
+                if (hasEnemyAdjacent) {
+                    borderCells.push(cell);
+                }
+            });
+            
+            return borderCells;
+        }
+
+        function deployTroops(fromCell, toCell, amount) {
+            if (!toCell.owner) {
+                // Claim neutral territory
+                toCell.owner = 'player';
+                toCell.troops = amount;
+                gameState.player.territories.add(toCell.id);
+            } else if (toCell.owner === 'player') {
+                // Reinforce existing territory
+                toCell.troops += amount;
+            } else {
+                // Attack enemy territory
+                toCell.troops -= amount;
+                if (toCell.troops <= 0) {
+                    // Capture territory
+                    const previousOwner = toCell.owner;
+                    toCell.owner = 'player';
+                    toCell.troops = Math.abs(toCell.troops);
+                    gameState.player.territories.add(toCell.id);
+                    
+                    // Remove from enemy
+                    const enemy = gameState.enemies.find(e => e.id === previousOwner);
+                    if (enemy) {
+                        enemy.territories.delete(toCell.id);
+                        addGameLog(`Captured territory from ${enemy.name}!`);
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            const currentTime = Date.now();
+            const deltaTime = (currentTime - gameState.lastTick) / 1000;
+            gameState.lastTick = currentTime;
+            
+            // AI enemy actions
+            gameState.enemies.forEach(enemy => {
+                if (enemy.balance > enemy.maxBalance * enemy.aggression) {
+                    const percent = 0.25; // AI sends 25% of balance
+                    const troops = Math.floor(enemy.balance * percent);
+                    enemy.balance -= troops;
+                    
+                    const borderCells = getEnemyBorderCells(enemy);
+                    if (borderCells.length > 0) {
+                        const troopsPerCell = Math.max(1, Math.floor(troops / borderCells.length));
+                        
+                        borderCells.forEach(cell => {
+                            const adjacent = getAdjacentCells(cell);
+                            const targetCells = adjacent.filter(adj => !adj.owner || adj.owner !== enemy.id);
+                            
+                            if (targetCells.length > 0) {
+                                const target = targetCells[Math.floor(Math.random() * targetCells.length)];
+                                deployAITroops(cell, target, troopsPerCell, enemy);
+                            }
+                        });
+                    }
+                }
+            });
+            
+            render();
+            updateUI();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function getEnemyBorderCells(enemy) {
+            const borderCells = [];
+            
+            enemy.territories.forEach(cellId => {
+                const cell = gameState.cells[cellId];
+                const adjacent = getAdjacentCells(cell);
+                const hasEnemyAdjacent = adjacent.some(adj => !adj.owner || adj.owner !== enemy.id);
+                
+                if (hasEnemyAdjacent) {
+                    borderCells.push(cell);
+                }
+            });
+            
+            return borderCells;
+        }
+
+        function deployAITroops(fromCell, toCell, amount, enemy) {
+            if (!toCell.owner) {
+                toCell.owner = enemy.id;
+                toCell.troops = amount;
+                enemy.territories.add(toCell.id);
+            } else if (toCell.owner === enemy.id) {
+                toCell.troops += amount;
+            } else {
+                toCell.troops -= amount;
+                if (toCell.troops <= 0) {
+                    const previousOwner = toCell.owner;
+                    toCell.owner = enemy.id;
+                    toCell.troops = Math.abs(toCell.troops);
+                    enemy.territories.add(toCell.id);
+                    
+                    if (previousOwner === 'player') {
+                        gameState.player.territories.delete(toCell.id);
+                    } else {
+                        const otherEnemy = gameState.enemies.find(e => e.id === previousOwner);
+                        if (otherEnemy) otherEnemy.territories.delete(toCell.id);
+                    }
+                }
+            }
+        }
+
+        function incomeTick() {
+            // Player income
+            const baseIncome = gameState.player.income;
+            const territoryBonus = gameState.player.territories.size * 0.2;
+            gameState.player.balance = Math.min(
+                gameState.player.maxBalance,
+                gameState.player.balance + baseIncome + territoryBonus
+            );
+            
+            // Enemy income
+            gameState.enemies.forEach(enemy => {
+                const enemyBonus = enemy.territories.size * 0.15;
+                enemy.balance = Math.min(
+                    enemy.maxBalance,
+                    enemy.balance + enemy.income + enemyBonus
+                );
+            });
+            
+            // Check win/lose conditions
+            checkGameState();
+            
+            updateUI();
+        }
+
+        function checkGameState() {
+            // Remove defeated enemies
+            gameState.enemies = gameState.enemies.filter(enemy => {
+                if (enemy.territories.size === 0) {
+                    addGameLog(`Defeated ${enemy.name}!`);
+                    return false;
+                }
+                return true;
+            });
+            
+            // Check if player lost
+            if (gameState.player.territories.size === 0) {
+                addGameLog('💀 You have been defeated!');
+                setTimeout(() => {
+                    if (confirm('You lost! Return to menu?')) {
+                        window.location.href = 'index.html';
+                    }
+                }, 1000);
+            }
+            
+            // Check if player won
+            if (gameState.enemies.length === 0 && gameState.player.territories.size > 0) {
+                addGameLog('🎉 Victory! You conquered all territories!');
+                setTimeout(() => {
+                    if (confirm('You won! Return to menu?')) {
+                        window.location.href = 'index.html';
+                    }
+                }, 1000);
+            }
+            
+            updateEnemyList();
+        }
+
+        function updateUI() {
+            const balancePercent = (gameState.player.balance / gameState.player.maxBalance) * 100;
+            document.getElementById('balanceFill').style.width = `${balancePercent}%`;
+            document.getElementById('balanceText').textContent = Math.floor(gameState.player.balance);
+            document.getElementById('incomeText').textContent = `+${gameState.player.income}`;
+        }
+
+        function updateEnemyList() {
+            const enemyList = document.getElementById('enemyList');
+            enemyList.innerHTML = '';
+            
+            gameState.enemies.forEach(enemy => {
+                const enemyItem = document.createElement('div');
+                enemyItem.className = 'enemy-item';
+                enemyItem.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <div class="enemy-color" style="background: ${enemy.color}"></div>
+                        ${enemy.name}
+                    </div>
+                    <span>${enemy.territories.size} territories</span>
+                `;
+                enemyList.appendChild(enemyItem);
+            });
+        }
+
+        function addGameLog(message) {
+            const log = document.getElementById('gameLog');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.textContent = message;
+            log.appendChild(entry);
+            
+            // Auto-scroll to bottom
+            log.scrollTop = log.scrollHeight;
+            
+            // Keep only last 10 messages
+            while (log.children.length > 10) {
+                log.removeChild(log.firstChild);
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            gameState.gameSize.width = window.innerWidth;
+            gameState.gameSize.height = window.innerHeight - 60;
+            canvas.width = gameState.gameSize.width;
+            canvas.height = gameState.gameSize.height;
+            render();
+        });
+
+        // Initialize game when page loads
+        window.addEventListener('load', initGame);
     </script>
 </body>
 </html>
