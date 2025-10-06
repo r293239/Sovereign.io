@@ -120,6 +120,14 @@
             box-shadow: 0 0 10px #e74c3c;
         }
 
+        .building-btn {
+            background: #27ae60;
+        }
+
+        .building-btn:hover {
+            background: #219653;
+        }
+
         .menu-btn {
             background: #e74c3c;
             flex: none;
@@ -183,38 +191,33 @@
             border-radius: 3px;
         }
 
-        .attack-indicator {
+        .building-panel {
             position: absolute;
-            pointer-events: none;
-            z-index: 100;
+            top: 20px;
+            left: 20px;
+            background: rgba(26, 26, 26, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #f39c12;
+            min-width: 200px;
         }
 
-        .crosshair {
-            width: 20px;
-            height: 20px;
-            position: absolute;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
+        .building-option {
+            background: #34495e;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            border: 2px solid transparent;
         }
 
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background: #ff0000;
+        .building-option:hover {
+            border-color: #f39c12;
         }
 
-        .crosshair::before {
-            width: 2px;
-            height: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-
-        .crosshair::after {
-            width: 20px;
-            height: 2px;
-            top: 50%;
-            transform: translateY(-50%);
+        .building-option.available {
+            border-color: #27ae60;
         }
     </style>
 </head>
@@ -254,6 +257,23 @@
                 </div>
             </div>
 
+            <div class="building-panel">
+                <h3>🏗️ Buildings</h3>
+                <div class="building-option available" onclick="buildStructure('mine')">
+                    ⛏️ Gold Mine<br>
+                    <small>Cost: 200 | +10 income</small>
+                </div>
+                <div class="building-option available" onclick="buildStructure('barracks')">
+                    ⚔️ Barracks<br>
+                    <small>Cost: 150 | +5% attack</small>
+                </div>
+                <div class="building-option available" onclick="buildStructure('farm')">
+                    🚜 Farm<br>
+                    <small>Cost: 100 | +5 max balance</small>
+                </div>
+                <div id="buildingCount">Buildings: 0</div>
+            </div>
+
             <div class="info-panel">
                 <h3>Enemies</h3>
                 <div class="enemy-list" id="enemyList">
@@ -279,6 +299,7 @@
                 maxBalance: 1000,
                 income: 50,
                 territories: new Set(),
+                buildings: [],
                 troops: []
             },
             enemies: [],
@@ -290,6 +311,31 @@
             attackTarget: null,
             selectedPercentage: 0.2, // Default 20%
             movingTroops: []
+        };
+
+        // Building definitions
+        const BUILDINGS = {
+            mine: {
+                name: "Gold Mine",
+                cost: 200,
+                income: 10,
+                color: '#f39c12',
+                symbol: '⛏️'
+            },
+            barracks: {
+                name: "Barracks", 
+                cost: 150,
+                attackBonus: 0.05,
+                color: '#e74c3c',
+                symbol: '⚔️'
+            },
+            farm: {
+                name: "Farm",
+                cost: 100,
+                maxBalance: 5,
+                color: '#27ae60',
+                symbol: '🚜'
+            }
         };
 
         // Canvas setup
@@ -333,7 +379,8 @@
                     gameState.cells[cellId] = {
                         x, y,
                         owner: null,
-                        troops: 0
+                        troops: 0,
+                        building: null
                     };
                     gameState.map.push(gameState.cells[cellId]);
                 }
@@ -388,6 +435,7 @@
                     maxBalance: 800,
                     income: 40,
                     territories: new Set(),
+                    buildings: [],
                     aggression: difficulty === 'hard' ? 0.4 : difficulty === 'medium' ? 0.3 : 0.2
                 };
                 
@@ -441,18 +489,36 @@
                     ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
                     ctx.fillRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
                 }
+                
+                // Draw buildings
+                if (cell.building) {
+                    const building = BUILDINGS[cell.building.type];
+                    ctx.fillStyle = building.color;
+                    ctx.font = '12px Arial';
+                    ctx.fillText(building.symbol, cell.x + 2, cell.y + 10);
+                }
             });
 
-            // Draw moving troops
+            // Draw moving troops and their conquered path
             gameState.movingTroops.forEach(troop => {
+                // Draw conquered path cells
+                troop.conqueredCells.forEach(cellId => {
+                    const cell = gameState.cells[cellId];
+                    if (cell) {
+                        ctx.fillStyle = 'rgba(46, 204, 113, 0.3)'; // Semi-transparent green
+                        ctx.fillRect(cell.x, cell.y, gameState.cellSize, gameState.cellSize);
+                    }
+                });
+                
+                // Draw troop
                 ctx.fillStyle = gameState.player.color;
                 ctx.beginPath();
-                ctx.arc(troop.x, troop.y, 3, 0, Math.PI * 2);
+                ctx.arc(troop.x, troop.y, 4, 0, Math.PI * 2);
                 ctx.fill();
                 
                 // Draw movement line
-                ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(46, 204, 113, 0.6)';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(troop.startX, troop.startY);
                 ctx.lineTo(troop.x, troop.y);
@@ -541,11 +607,47 @@
                     targetY: gameState.attackTarget.y,
                     strength: troopsPerSource,
                     progress: 0,
-                    speed: 2
+                    speed: 2,
+                    conqueredCells: new Set() // Track conquered path
                 });
             }
             
             addGameLog(`Deploying ${troopsToSend} troops (${gameState.selectedPercentage * 100}%) to target`);
+            updateUI();
+        }
+
+        function buildStructure(type) {
+            const building = BUILDINGS[type];
+            if (!building) return;
+            
+            if (gameState.player.balance < building.cost) {
+                addGameLog(`Not enough balance! Need ${building.cost}`);
+                return;
+            }
+            
+            // Find a player territory to build on
+            const playerTerritories = Array.from(gameState.player.territories).map(id => gameState.cells[id]);
+            if (playerTerritories.length === 0) {
+                addGameLog('No territory to build on!');
+                return;
+            }
+            
+            const buildCell = playerTerritories[Math.floor(Math.random() * playerTerritories.length)];
+            
+            gameState.player.balance -= building.cost;
+            buildCell.building = {
+                type: type,
+                level: 1
+            };
+            
+            gameState.player.buildings.push({
+                type: type,
+                cellId: buildCell.id,
+                cell: buildCell
+            });
+            
+            addGameLog(`Built ${building.name} for ${building.cost} balance`);
+            updateBuildingCount();
             updateUI();
         }
 
@@ -566,7 +668,7 @@
             const deltaTime = (currentTime - gameState.lastTick) / 1000;
             gameState.lastTick = currentTime;
             
-            // Update moving troops
+            // Update moving troops and conquer path
             gameState.movingTroops = gameState.movingTroops.filter(troop => {
                 troop.progress += troop.speed * deltaTime;
                 
@@ -575,8 +677,14 @@
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 const progressRatio = Math.min(troop.progress / distance, 1);
                 
+                const prevX = troop.x;
+                const prevY = troop.y;
+                
                 troop.x = troop.startX + dx * progressRatio;
                 troop.y = troop.startY + dy * progressRatio;
+                
+                // Conquer cells along the path
+                conquerPathCells(troop, prevX, prevY);
                 
                 // Check if reached target
                 if (progressRatio >= 1) {
@@ -600,11 +708,32 @@
                         const targetX = Math.random() * gameState.gameSize.width;
                         const targetY = Math.random() * gameState.gameSize.height;
                         
-                        // Simple AI troop movement (could be enhanced)
                         const targetCell = findCellAt(targetX, targetY);
                         if (targetCell && targetCell.owner !== enemy.id) {
                             deployAITroops(source, targetCell, troops, enemy);
                         }
+                    }
+                }
+                
+                // AI building construction
+                if (enemy.balance > 300 && Math.random() < 0.01) {
+                    const buildingTypes = Object.keys(BUILDINGS);
+                    const randomType = buildingTypes[Math.floor(Math.random() * buildingTypes.length)];
+                    const building = BUILDINGS[randomType];
+                    
+                    const enemyTerritories = Array.from(enemy.territories).map(id => gameState.cells[id]);
+                    if (enemyTerritories.length > 0 && enemy.balance >= building.cost) {
+                        const buildCell = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
+                        enemy.balance -= building.cost;
+                        buildCell.building = {
+                            type: randomType,
+                            level: 1
+                        };
+                        enemy.buildings.push({
+                            type: randomType,
+                            cellId: buildCell.id,
+                            cell: buildCell
+                        });
                     }
                 }
             });
@@ -613,22 +742,50 @@
             requestAnimationFrame(gameLoop);
         }
 
+        function conquerPathCells(troop, prevX, prevY) {
+            // Get current cell position
+            const currentCell = findCellAt(troop.x, troop.y);
+            if (currentCell && currentCell.owner !== 'player') {
+                // Claim this cell for the player
+                const previousOwner = currentCell.owner;
+                currentCell.owner = 'player';
+                currentCell.troops = 5; // Small garrison
+                gameState.player.territories.add(currentCell.id);
+                troop.conqueredCells.add(currentCell.id);
+                
+                // Remove from enemy if it was enemy territory
+                if (previousOwner && previousOwner !== 'player') {
+                    const enemy = gameState.enemies.find(e => e.id === previousOwner);
+                    if (enemy) {
+                        enemy.territories.delete(currentCell.id);
+                    }
+                }
+            }
+        }
+
         function deployTroopsToCell(troop) {
             const targetCell = findCellAt(troop.targetX, troop.targetY);
             if (!targetCell) return;
             
+            // Apply building bonuses
+            let attackStrength = troop.strength;
+            const barracks = gameState.player.buildings.filter(b => b.type === 'barracks').length;
+            if (barracks > 0) {
+                attackStrength = Math.floor(attackStrength * (1 + (barracks * 0.05)));
+            }
+            
             if (!targetCell.owner) {
                 // Claim neutral territory
                 targetCell.owner = 'player';
-                targetCell.troops = troop.strength;
+                targetCell.troops = attackStrength;
                 gameState.player.territories.add(targetCell.id);
                 addGameLog(`Claimed new territory at (${Math.floor(troop.targetX/gameState.cellSize)}, ${Math.floor(troop.targetY/gameState.cellSize)})`);
             } else if (targetCell.owner === 'player') {
                 // Reinforce existing territory
-                targetCell.troops += troop.strength;
+                targetCell.troops += attackStrength;
             } else {
                 // Attack enemy territory
-                targetCell.troops -= troop.strength;
+                targetCell.troops -= attackStrength;
                 if (targetCell.troops <= 0) {
                     // Capture territory
                     const previousOwner = targetCell.owner;
@@ -676,9 +833,20 @@
         }
 
         function incomeTick() {
+            // Calculate base income from buildings
+            let buildingIncome = 0;
+            let maxBalanceBonus = 0;
+            
+            gameState.player.buildings.forEach(buildingData => {
+                const building = BUILDINGS[buildingData.type];
+                if (building.income) buildingIncome += building.income;
+                if (building.maxBalance) maxBalanceBonus += building.maxBalance;
+            });
+            
             // Player income
-            const baseIncome = gameState.player.income;
+            const baseIncome = gameState.player.income + buildingIncome;
             const territoryBonus = gameState.player.territories.size * 0.2;
+            gameState.player.maxBalance = 1000 + maxBalanceBonus;
             gameState.player.balance = Math.min(
                 gameState.player.maxBalance,
                 gameState.player.balance + baseIncome + territoryBonus
@@ -686,10 +854,16 @@
             
             // Enemy income
             gameState.enemies.forEach(enemy => {
+                let enemyBuildingIncome = 0;
+                enemy.buildings.forEach(buildingData => {
+                    const building = BUILDINGS[buildingData.type];
+                    if (building.income) enemyBuildingIncome += building.income;
+                });
+                
                 const enemyBonus = enemy.territories.size * 0.15;
                 enemy.balance = Math.min(
                     enemy.maxBalance,
-                    enemy.balance + enemy.income + enemyBonus
+                    enemy.balance + enemy.income + enemyBuildingIncome + enemyBonus
                 );
             });
             
@@ -736,6 +910,11 @@
             document.getElementById('balanceText').textContent = Math.floor(gameState.player.balance);
             document.getElementById('incomeText').textContent = `+${gameState.player.income}`;
             updateTargetInfo();
+            updateBuildingCount();
+        }
+
+        function updateBuildingCount() {
+            document.getElementById('buildingCount').textContent = `Buildings: ${gameState.player.buildings.length}`;
         }
 
         function updateEnemyList() {
